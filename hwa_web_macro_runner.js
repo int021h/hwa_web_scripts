@@ -7,27 +7,27 @@ const gameArea = gameCanvas.getBoundingClientRect()
 const canvasScaleX = gameCanvas.width / gameArea.width
 const canvasScaleY = gameCanvas.height / gameArea.height
 
+// MACRO stuff
 const actionClick = 1
 const actionDelay = 2
 const actionChooseRoom = 3
 const actionTitle = 4
 const actionWaitForColor = 5
 
+var isRunningMacro = false
+var lvlTitle = ""
+
+
 // Pixel color picker
-
 const colorsMatchThreshold = 15
-
-const originalRAF = window.requestAnimationFrame
 const gl = gameCanvas.getContext('webgl2')
-
+const originalRAF = window.requestAnimationFrame
 let pendingRead = null
-
+const pixels = new Uint8Array(4)
 var readPixelsOnce = 0
 var readX = 0
 var readY = 0
 
-var isRunningMacro = false
-var lvlTitle = ""
 
 window.requestAnimationFrame = function(callback) {
     return originalRAF.call(window, onFrame)
