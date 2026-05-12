@@ -45,6 +45,24 @@ window.requestAnimationFrame = function(callback) {
     })
 }
 
+let wakeLock = null
+async function enableWakeLock() {
+    try {
+        wakeLock = await navigator.wakeLock.request('screen')
+        console.log('Wake Lock enabled')
+        wakeLock.addEventListener('release', () => {
+            console.log('Wake Lock released')
+        })
+    } catch (err) {
+        console.error(err)
+    }
+}
+
+async function releaseWakeLock() {
+    await wakeLock.release()
+    wakeLock = null
+}
+
 async function readPixelOnDraw(x, y, delay = 100) {
     const sleep = ms => new Promise(r => setTimeout(r, ms))
     readX = x
@@ -280,10 +298,12 @@ async function runDungeonMacro() {
     if (isRunningMacro) {
         isRunningMacro = false
         dungeonMacroButton.textContent = "Run Dungeon"
+        releaseWakeLock()
         return 
     } else {
         dungeonMacroButton.textContent = "Stop Dungeon"
         isRunningMacro = true
+        enableWakeLock()
     }
 
     
@@ -504,6 +524,7 @@ async function runDungeonMacro() {
         ])
     }
     isRunningMacro = false
+    releaseWakeLock()
     dungeonMacroButton.textContent = "Run Dungeon"
 }
 
