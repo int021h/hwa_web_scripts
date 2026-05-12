@@ -373,9 +373,9 @@ async function runDungeonMacro() {
 
     // ======= dungeon elemental rooms ======= 
     const waitFor1RoomSelection = {
-        x: 0.65488565, 
-        y: 0.1708428,
-        color: [19,15,7], 
+        x: 0.69969666, 
+        y: 0.8506637,
+        color: [17,12,6], 
         delay: 100, 
         actionType: actionWaitForColor, 
         title: "waiting for single room selection popup"
