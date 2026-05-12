@@ -1,4 +1,4 @@
-/// VERSION 1.0.2
+/// VERSION 1.0.3
 /// MACRO RUNNER - PASTE THIS CODE IN CONSOLE ONLY ONCE
 /// Send your ideas for improvements to Deidara/Phoenix Rebirth at Discord: @int021h
 const DEBUG_CLICKS = false
@@ -19,7 +19,9 @@ const colorsMatchThreshold = 15
 
 const originalRAF = window.requestAnimationFrame
 const gl = gameCanvas.getContext('webgl2')
-const pixels = new Uint8Array(4)
+
+let pendingRead = null
+
 var readPixelsOnce = 0
 var readX = 0
 var readY = 0
@@ -28,20 +30,27 @@ var isRunningMacro = false
 var lvlTitle = ""
 
 window.requestAnimationFrame = function(callback) {
-    return originalRAF.call(this, function(time) {
+    return originalRAF.call(window, onFrame)
+    function onFrame(time) {
         callback(time)
-        if (readPixelsOnce > 0) {
-            readPixelsOnce--
-            gl.readPixels(
-                readX,
-                gl.canvas.height - readY,
-                1,
-                1,
-                gl.RGBA,
-                gl.UNSIGNED_BYTE,
-                pixels
-            )
-        }
+        if (!pendingRead) return
+        gl.readPixels(
+            pendingRead.x,
+            gl.canvas.height - pendingRead.y,
+            1,
+            1,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            pixels
+        )
+        pendingRead.resolve(new Uint8Array(pixels))
+        pendingRead = null
+    }
+}
+
+function readPixelOnDraw(x, y) {
+    return new Promise(resolve => {
+        pendingRead = { x, y, resolve }
     })
 }
 
@@ -61,15 +70,6 @@ async function enableWakeLock() {
 async function releaseWakeLock() {
     await wakeLock.release()
     wakeLock = null
-}
-
-async function readPixelOnDraw(x, y, delay = 100) {
-    const sleep = ms => new Promise(r => setTimeout(r, ms))
-    readX = x
-    readY = y
-    readPixelsOnce = 1
-    await sleep(delay)
-    return pixels
 }
 
 // ROOM Element detection
