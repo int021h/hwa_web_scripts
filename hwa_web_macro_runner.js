@@ -383,8 +383,8 @@ async function runDungeonMacro() {
     }
 
     
-    const floors = parseInt(maxFloors.value, 100) || 0
-    const hpLimit = parseInt(stopHPLimit.value) || 0
+    const floors = parseInt(maxFloors.value, 10) || 1000
+    const hpLimit = parseInt(stopHPLimit.value, 10) || 0
     const titansHpPoints = [[0.316481, 0.368048], [0.39636, 0.446916], [0.4752275, 0.527806], [0.555106, 0.608696], [0.634985, 0.688574]]
     
     var titansHP = [0,0,0,0,0]
