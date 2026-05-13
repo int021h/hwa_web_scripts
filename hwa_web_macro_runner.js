@@ -1,4 +1,4 @@
-/// VERSION 1.0.3
+/// VERSION 1.0.4
 /// MACRO RUNNER - PASTE THIS CODE IN CONSOLE ONLY ONCE
 /// Send your ideas for improvements to Deidara/Phoenix Rebirth at Discord: @int021h
 const DEBUG_CLICKS = false
@@ -146,11 +146,11 @@ function addDebugToolbar() {
     
     const option2 = document.createElement('option')
     option2.value = '30'
-    option2.textContent = 'If HP drops below 30%'
+    option2.textContent = 'If HP < 30%'
     
     const option3 = document.createElement('option')
     option3.value = '50'
-    option3.textContent = 'If HP drops below 50%'
+    option3.textContent = 'If HP < 50%'
 
     const option4 = document.createElement('option')
     option4.value = '100'
