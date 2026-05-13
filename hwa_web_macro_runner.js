@@ -20,7 +20,7 @@ var lvlTitle = ""
 
 
 // Pixel color picker
-const colorsMatchThreshold = 15
+const colorsMatchThreshold = 10
 const gl = gameCanvas.getContext('webgl2')
 const originalRAF = window.requestAnimationFrame
 let pendingRead = null
@@ -244,8 +244,8 @@ async function runActions(actions) {
                 }
             }
         } else if (actionType == actionWaitForColor) {
-            var retries = 1
-            var maxDelay = 10000
+            var retries = 2
+            var maxDelay = 5000
             var testPixel = []
             do {
                 await sleep(delay)
@@ -398,13 +398,13 @@ async function runDungeonMacro() {
     const someDelay = {x: 2, y: 2, delay: 2000, actionType: actionDelay}
 
     // ======= dungeon gates ======= 
-    const waitForGateRight = {x: 0.8378378378378378, y: 0.21184510250569477, color: [49,49,65], delay: 100, actionType: actionWaitForColor, title: "waiting for right gate scene"}
-    const waitForGate10 = {x: 0.3492723492723493, y:0.30068337129840544, color: [48,54,60], delay: 100, actionType: actionWaitForColor, title: "waiting for floor2 gate10 scene"}
+    const waitForGateRight = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: 100, actionType: actionWaitForColor, title: "waiting for right gate scene"}
     const gateRight = {x: 0.691268, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on right gate"}
     
-    const waitForGateMid = {x: 0.6424116424116424, y: 0.21184510250569477, color: [49,49,65], delay:100, actionType: actionWaitForColor, title: "waiting for mid gate scene"}
+    const waitForGateMid = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay:100, actionType: actionWaitForColor, title: "waiting for mid gate scene"}
     const gateMid = {x: 0.500, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on mid gate"}
-    const waitForGateLeft = {x: 0.16112266112266113, y: 0.21184510250569477, color: [49,49,65], delay: 100, actionType: actionWaitForColor, title: "waiting for left gate scene"}
+
+    const waitForGateLeft = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionWaitForColor, title: "waiting for left gate scene"}
     const gateLeft = {x: 0.312, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on left gate"}
 
     // ======= dungeon elemental rooms ======= 
@@ -436,7 +436,8 @@ async function runDungeonMacro() {
     // ======= dungeon floor finished symbol ======= 
     const waitForFloor1Done = {x:0.6496881496881497, y:0.30068337129840544, color: [51,54,60], delay: 100, actionType: actionWaitForColor, title: "waiting for floor1 final scene"}
     const floor1Done = {x: 0.7297, y: 0.47836, delay: 1000, actionType: actionClick, title: "clicking on floor1 final symbol"}
-    const waitForFloor2Done = {x: 0.3492723492723493, y: 0.30068337129840544, color: [48,54,60], delay: 100, actionType: actionWaitForColor, title: "waiting for floor2 final scene"}
+    
+    const waitForFloor2Done = {x: 0.2730030333670374, y: 0.17809734513274336, color: [58,70,90], delay: 100, actionType: actionWaitForColor, title: "waiting for floor2 final scene"}
     const floor2Done = {x: 0.27755, y: 0.47836, delay: 1000, actionType: actionClick, title: "clicking on floor2 final symbol"}
     
     // ======= dungeon floor finished popup ========
@@ -457,7 +458,7 @@ async function runDungeonMacro() {
             title("lvl7 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
             title("lvl8 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
             title("lvl9 single"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
-            title("lvl0 double"), waitForGate10, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl0 double"), waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
             title("floor2 done"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
         ])
     }
