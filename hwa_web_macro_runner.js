@@ -111,22 +111,28 @@ function addDebugToolbar() {
     
     const floors1 = document.createElement('option')
     floors1.value = '1'
-
+    floors1.textContent = '1'
+    
     const floors5 = document.createElement('option')
     floors5.value = '5'
+    floors5.textContent = '5'
     
     const floors10 = document.createElement('option')
     floors10.value = '10'
+    floors10.textContent = '10'
 
     const floors20 = document.createElement('option')
     floors20.value = '20'
+    floors20.textContent = '20'
     
     const floors100 = document.createElement('option')
     floors100.value = '100'
+    floors100.textContent = '100'
     
     const floors1000 = document.createElement('option')
     floors1000.value = '1000'
     floors1000.selected = true
+    floors1000.textContent = '1000'
 
     selectFloors.append(floors1, floors5, floors10, floors20, floors100, floors1000)
     
