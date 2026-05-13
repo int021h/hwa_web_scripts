@@ -106,13 +106,29 @@ function colorsAreSame(color1, color2, threshold = colorsMatchThreshold) {
 function addDebugToolbar() {
     const container = document.createElement('span')
 
-    const input = document.createElement('input')
-    input.id = 'maxFloors'
-    input.type = 'text'
-    input.maxLength = 4
-    input.inputMode = 'numeric'
-    input.placeholder = '1000'
-    input.value = '1000'
+    const selectFloors = document.createElement('select')
+    selectFloors.id = 'maxFloors'
+    
+    const floors1 = document.createElement('option')
+    floors1.value = '1'
+
+    const floors5 = document.createElement('option')
+    floors5.value = '5'
+    
+    const floors10 = document.createElement('option')
+    floors10.value = '10'
+
+    const floors20 = document.createElement('option')
+    floors20.value = '20'
+    
+    const floors100 = document.createElement('option')
+    floors100.value = '100'
+    
+    const floors1000 = document.createElement('option')
+    floors1000.value = '1000'
+    floors1000.selected = true
+
+    selectFloors.append(floors1, floors5, floors10, floors20, floors100, floors1000)
     
     const select = document.createElement('select')
     select.id = 'stopHPLimit'
@@ -154,7 +170,7 @@ function addDebugToolbar() {
     roomRight.textContent = 'RIGHT'
 
     container.appendChild(document.createTextNode(' Max floors: '))
-    container.appendChild(input)
+    container.appendChild(selectFloors)
     container.appendChild(document.createTextNode(' Stop: '))
     container.appendChild(select)
     container.appendChild(document.createTextNode(' '))
