@@ -13,6 +13,7 @@ const actionDelay = 2
 const actionChooseRoom = 3
 const actionTitle = 4
 const actionWaitForColor = 5
+const actionInterruptIfColor = 6
 
 var isRunningMacro = false
 var lvlTitle = ""
@@ -105,6 +106,36 @@ function colorsAreSame(color1, color2, threshold = colorsMatchThreshold) {
 function addDebugToolbar() {
     const container = document.createElement('span')
 
+    const input = document.createElement('input')
+    input.id = 'maxFloors'
+    input.type = 'text'
+    input.maxLength = 4
+    input.inputMode = 'numeric'
+    input.placeholder = '1000'
+    input.value = '1000'
+    
+    const select = document.createElement('select')
+    select.id = 'stopHPLimit'
+
+    const option1 = document.createElement('option')
+    option1.value = '0'
+    option1.textContent = 'If titan dies'
+    option1.selected = true
+    
+    const option2 = document.createElement('option')
+    option2.value = '30'
+    option2.textContent = 'If HP drops below 30%'
+    
+    const option3 = document.createElement('option')
+    option3.value = '50'
+    option3.textContent = 'If HP drops below 50%'
+
+    const option4 = document.createElement('option')
+    option4.value = '100'
+    option4.textContent = 'Never'
+
+    select.append(option1, option2, option3, option4)
+    
     const button = document.createElement('button')
     button.id = 'dungeonMacroButton'
     button.textContent = 'Run Dungeon'
@@ -122,6 +153,11 @@ function addDebugToolbar() {
     roomRight.id = 'roomRight'
     roomRight.textContent = 'RIGHT'
 
+    container.appendChild(document.createTextNode(' Max floors: '))
+    container.appendChild(input)
+    container.appendChild(document.createTextNode(' Stop: '))
+    container.appendChild(select)
+    container.appendChild(document.createTextNode(' '))
     container.appendChild(button)
     container.appendChild(document.createTextNode(' '))
     container.appendChild(roomLeft)
@@ -151,6 +187,7 @@ async function runActions(actions) {
         const {
             x = 0,
             y = 0,
+            hpX = [],
             color = [],
             altX = 0,
             delay = 0,
@@ -170,6 +207,19 @@ async function runActions(actions) {
         if (actionType == actionDelay) {
             if (delay > 0) {
                 await sleep(delay)
+            }
+        } else if (actionType == actionInterruptIfColor) {
+            for (var i = 0; i<hpX.length; i++) {
+                var testPixel = []
+                testPixel = await readPixelOnDraw(
+                    gameArea.width * hpX[i] * canvasScaleX,
+                    (gameArea.height * y) * canvasScaleY,
+                )
+                if (colorsAreSame(testPixel, color)) {
+                    isRunningMacro = false
+                    console.log("Titan's HP is tooo low to continue")
+                    return
+                }
             }
         } else if (actionType == actionWaitForColor) {
             var retries = 1
@@ -195,7 +245,7 @@ async function runActions(actions) {
                          break
                     }
                 }
-            } while (!colorsAreSame(testPixel, color, colorsMatchThreshold) && isRunningMacro)
+            } while (!colorsAreSame(testPixel, color) && isRunningMacro)
             await sleep(delay)
         } else if (actionType == actionChooseRoom) {
             var leftPixel = await readPixelOnDraw(
@@ -294,6 +344,10 @@ async function runDungeonMacro() {
     function title(title) {
        return {actionType: actionTitle, title: title}
     }
+    function getPointInRange(min, max, percent) {
+        const t = percent / 100
+        return min + (max - min) * t
+    }
 
     if (isRunningMacro) {
         isRunningMacro = false
@@ -307,219 +361,81 @@ async function runDungeonMacro() {
     }
 
     
-    const someDelay = { 
-        x: 2, 
-        y: 2, 
-        delay: 2000, 
-        actionType: actionDelay
+    const floors = parseInt(maxFloors.value, 100) || 0
+    const hpLimit = parseInt(stopHPLimit.value) || 0
+    const titansHpPoints = [[0.316481, 0.368048], [0.39636, 0.446916], [0.4752275, 0.527806], [0.555106, 0.608696], [0.634985, 0.688574]]
+    
+    var titansHP = [0,0,0,0,0]
+    if (hpLimit < 100) {
+        for (var i = 0; i<5; i++) {
+            titansHP[i] = getPointInRange(titansHpPoints[i][0], titansHpPoints[i][1], hpLimit)
+        }
     }
+    console.log(titansHP)
+
+    const someDelay = {x: 2, y: 2, delay: 2000, actionType: actionDelay}
 
     // ======= dungeon gates ======= 
-    const waitForGateRight = {
-        x: 0.8378378378378378,
-        y: 0.21184510250569477,
-        color: [49,49,65], 
-        delay: 100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for right gate scene"
-    }
-    const waitForGate10 = {
-        x: 0.3492723492723493, 
-        y:0.30068337129840544, 
-        color: [48,54,60], 
-        delay: 100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for floor2 gate10 scene"
-    }
-    const gateRight = {
-        x:0.691268,
-        y:0.5, 
-        delay: 500, 
-        actionType: actionClick, 
-        title: "clicking on right gate"
-    }
-
-    const waitForGateMid = {
-        x: 0.6424116424116424, 
-        y: 0.21184510250569477, 
-        color: [49,49,65], 
-        delay:100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for mid gate scene"
-    }
-    const gateMid = {
-        x: 0.500, 
-        y: 0.5, 
-        delay: 500, 
-        actionType: actionClick, 
-        title: "clicking on mid gate"
-    }
-
-    const waitForGateLeft = {
-        x: 0.16112266112266113, 
-        y: 0.21184510250569477, 
-        color: [49,49,65], 
-        delay: 100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for left gate scene"
-    }
-    const gateLeft = {
-        x: 0.312, 
-        y: 0.5, 
-        delay: 500, 
-        actionType: actionClick, 
-        title: "clicking on left gate"
-    }
+    const waitForGateRight = {x: 0.8378378378378378, y: 0.21184510250569477, color: [49,49,65], delay: 100, actionType: actionWaitForColor, title: "waiting for right gate scene"}
+    const waitForGate10 = {x: 0.3492723492723493, y:0.30068337129840544, color: [48,54,60], delay: 100, actionType: actionWaitForColor, title: "waiting for floor2 gate10 scene"}
+    const gateRight = {x: 0.691268, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on right gate"}
+    
+    const waitForGateMid = {x: 0.6424116424116424, y: 0.21184510250569477, color: [49,49,65], delay:100, actionType: actionWaitForColor, title: "waiting for mid gate scene"}
+    const gateMid = {x: 0.500, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on mid gate"}
+    const waitForGateLeft = {x: 0.16112266112266113, y: 0.21184510250569477, color: [49,49,65], delay: 100, actionType: actionWaitForColor, title: "waiting for left gate scene"}
+    const gateLeft = {x: 0.312, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on left gate"}
 
     // ======= dungeon elemental rooms ======= 
-    const waitFor1RoomSelection = {
-        x: 0.69969666, 
-        y: 0.8506637,
-        color: [17,12,6], 
-        delay: 100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for single room selection popup"
-    }
-    const waitFor2RoomSelection = {
-        x: 0.5, 
-        y: 0.5, 
-        color: [19,17,7], 
-        delay: 100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for double room selection popup"
-    }
-    const roomMid = {
-        x: 0.5, 
-        y: 0.795, 
-        delay: 500, 
-        actionType: actionClick, 
-        title: "clicking on mid room"
-    }
+    const waitFor1RoomSelection = {x: 0.69969666, y: 0.8506637, color: [17,12,6], delay: 100, actionType: actionWaitForColor, title: "waiting for single room selection popup"}
+    const waitFor2RoomSelection = {x: 0.5, y: 0.5, color: [19,17,7], delay: 100, actionType: actionWaitForColor, title: "waiting for double room selection popup"}
+    const roomMid = {x: 0.5, y: 0.795, delay: 500, actionType: actionClick, title: "clicking on mid room"}
 
     //  ======= usage: checkRoomColors, roomLeft, roomRight ======= 
-    const checkRoomColors = {
-        x: 0.31496881496881496, 
-        y: 0.6560364464692483,
-        altX: 0.6891891891891891,
-        delay: 100, 
-        actionType: actionChooseRoom, 
-        title: "choosing a correct room"
-    }
-    const roomLeft = {
-        x: 0.3076, 
-        y: 0.8,
-        delay: 500, 
-        actionType: actionClick,
-        title: "clicking on left room"
-    }
-    const roomRight = {
-        x: 0.6833, 
-        y: 0.8, 
-        delay: 500, 
-        actionType: actionClick,
-        title: "clicking on right room"
-    }
+    const checkRoomColors = {x: 0.31496881496881496, y: 0.6560364464692483, altX: 0.6891891891891891, delay: 100, actionType: actionChooseRoom, title: "choosing a correct room"}
+    const roomLeft = {x: 0.3076, y: 0.8, delay: 500, actionType: actionClick, title: "clicking on left room"}
+    const roomRight = {x: 0.6833, y: 0.8, delay: 500, actionType: actionClick, title: "clicking on right room"}
     // ======= dungeon battlefield screen ======= 
 
-    const waitForBattlefield = {
-        x: 0.014553, 
-        y: 0.952164, 
-        color: [34,46,64], 
-        delay: 100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for battlefield scene"
-    }
-    const autoBattle = {
-        x: 0.87214, 
-        y: 0.758542, 
-        delay: 500, 
-        actionType: actionClick, 
-        title: "clicking autobattle"
-    }
+    const waitForBattlefield = {x: 0.014553, y: 0.952164, color: [34,46,64], delay: 100, actionType: actionWaitForColor, title: "waiting for battlefield scene"}
+    const autoBattle = {x: 0.87214, y: 0.758542, delay: 500, actionType: actionClick, title: "clicking autobattle"}
 
     // ======= dungeon confirm auto-battle results screen ======= 
-    const waitForConfirmBattle = {
-        x: 0.60083, 
-        y: 0.127563, 
-        color: [137,1,0], 
-        delay:100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for battle result popup"
+    const waitForConfirmBattle = {x: 0.60083, y: 0.127563, color: [137,1,0], delay:100, actionType: actionWaitForColor, title: "waiting for battle result popup"}
+
+    var checkHP = title("check titans HP")
+    
+    if (titansHP[0] > 0) {
+        checkHP = {x: 0, hpX: titansHP, y: 0.461, color: [26,16,6], actionType: actionInterruptIfColor, title: "Check titans HP"}
     }
-    const confirmBattle = {
-        x: 0.641372, 
-        y: 0.822323, 
-        delay: 1000, 
-        actionType: actionClick, 
-        title: "clicking on confirm battle result"
-    }
+    
+    
+    const confirmBattle = {x: 0.641372, y: 0.822323, delay: 1000, actionType: actionClick, title: "clicking on confirm battle result"}
 
     // ======= dungeon floor finished symbol ======= 
-    const waitForFloor1Done = {
-        x:0.6496881496881497, 
-        y:0.30068337129840544, 
-        color: [51,54,60], 
-        delay: 100, 
-        actionType: actionWaitForColor,
-        title: "waiting for floor1 final scene"
-    }
-    const floor1Done = {
-        x: 0.7297, 
-        y: 0.47836, 
-        delay: 1000, 
-        actionType: actionClick, 
-        title: "clicking on floor1 final symbol"
-    }
-
-    const waitForFloor2Done = {
-        x: 0.3492723492723493, 
-        y: 0.30068337129840544, 
-        color: [48,54,60], 
-        delay: 100, 
-        actionType: actionWaitForColor, 
-        title: "waiting for floor2 final scene"
-    }
-    const floor2Done = {
-        x: 0.27755, 
-        y: 0.47836, 
-        delay: 1000, 
-        actionType: actionClick, 
-        title: "clicking on floor2 final symbol"
-    }
+    const waitForFloor1Done = {x:0.6496881496881497, y:0.30068337129840544, color: [51,54,60], delay: 100, actionType: actionWaitForColor, title: "waiting for floor1 final scene"}
+    const floor1Done = {x: 0.7297, y: 0.47836, delay: 1000, actionType: actionClick, title: "clicking on floor1 final symbol"}
+    const waitForFloor2Done = {x: 0.3492723492723493, y: 0.30068337129840544, color: [48,54,60], delay: 100, actionType: actionWaitForColor, title: "waiting for floor2 final scene"}
+    const floor2Done = {x: 0.27755, y: 0.47836, delay: 1000, actionType: actionClick, title: "clicking on floor2 final symbol"}
+    
     // ======= dungeon floor finished popup ========
-
-    const waitForFloorConfirm = {
-        x: 0.5, 
-        y: 0.5, 
-        color: [22,12,8], 
-        delay: 100, 
-        actionType: actionWaitForColor,  
-        title: "waiting for floor confirmation popup"
-    }
-    const floorConfirm = {
-        x: 0.635, 
-        y: 0.697, 
-        delay: 4000, 
-        actionType: actionClick, 
-        title: "clicking on floor confirmation popup"
-    }
-    const floors = 200
-
+    const waitForFloorConfirm = {x: 0.5, y: 0.5, color: [22,12,8], delay: 100, actionType: actionWaitForColor,  title: "waiting for floor confirmation popup"}
+    const floorConfirm = {x: 0.635, y: 0.697, delay: 4000, actionType: actionClick, title: "clicking on floor confirmation popup"}
+    
     for (let i = 0; i < floors; i++) {
         if (!isRunningMacro) return
         await runActions([
             someDelay, 
-            title("lvl1 single"), waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle,
-            title("lvl2 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle,
-            title("lvl3 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle,
-            title("lvl4 single"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle,
-            title("lvl5 double"), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle,
+            title("lvl1 single"), waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl2 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl3 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl4 single"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl5 double"), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
             title("floor1 done"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm, 
-            title("lvl6 single"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle, 
-            title("lvl7 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle, 
-            title("lvl8 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle, 
-            title("lvl9 single"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle, 
-            title("lvl0 double"), waitForGate10, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, confirmBattle,
+            title("lvl6 single"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl7 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl8 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl9 single"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl0 double"), waitForGate10, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
             title("floor2 done"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
         ])
     }
