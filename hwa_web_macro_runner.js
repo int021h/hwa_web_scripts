@@ -202,10 +202,8 @@ async function runActions(actions) {
         
         if (skipActions > 0) {
             skipActions--
-            console.log("Skipping left room: ", JSON.stringify(action))
             continue
         }
-        console.log(JSON.stringify(action))
         const {
             x = 0,
             y = 0,
@@ -224,6 +222,7 @@ async function runActions(actions) {
 
         if (title != "") {
             document.title = lvlTitle + ": " + title
+            console.log(document.title)
         }
 
         if (actionType == actionDelay) {
@@ -239,7 +238,7 @@ async function runActions(actions) {
                 )
                 if (colorsAreSame(testPixel, color)) {
                     isRunningMacro = false
-                    console.log("Titan's HP is tooo low to continue")
+                    console.log(lvlTitle, ":", i+1, "titan's HP is tooo low to continue")
                     return
                 }
             }
@@ -258,12 +257,12 @@ async function runActions(actions) {
                 if (maxDelay <= 0) {
                     // =========== didn't see the required color => try to click again and wait one more time ==========
                     if (retries > 0) {
-                         console.log("Colors didn't match after 10secs (retrying): ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
+                         console.log("Colors didn't match after 10sec (retrying): ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
                          retries--
                          maxDelay = 10000
                          await runActions([prevClickAction])
                     } else {
-                         console.log("Colors didn't match after 10secs (skipping check): ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
+                         console.log("Colors didn't match after 10sec (skipping): ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
                          break
                     }
                 }
@@ -393,7 +392,6 @@ async function runDungeonMacro() {
             titansHP[i] = getPointInRange(titansHpPoints[i][0], titansHpPoints[i][1], hpLimit)
         }
     }
-    console.log(titansHP)
 
     const someDelay = {x: 2, y: 2, delay: 2000, actionType: actionDelay}
 
@@ -448,18 +446,18 @@ async function runDungeonMacro() {
         if (!isRunningMacro) return
         await runActions([
             someDelay, 
-            title("lvl1 single"), waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-            title("lvl2 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-            title("lvl3 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-            title("lvl4 single"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-            title("lvl5 double"), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-            title("floor1 done"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm, 
-            title("lvl6 single"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
-            title("lvl7 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
-            title("lvl8 double"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
-            title("lvl9 single"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
-            title("lvl0 double"), waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-            title("floor2 done"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
+            title("lvl1"), waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl2"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl3"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl4"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("lvl5"), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm, 
+            title("lvl6"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl7"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl8"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl9"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, 
+            title("lvl0"), waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+            title("floor2"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
         ])
     }
     isRunningMacro = false
