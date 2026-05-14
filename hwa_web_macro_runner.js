@@ -103,6 +103,24 @@ function colorsAreSame(color1, color2, threshold = colorsMatchThreshold) {
     return true
 }
 
+function setDungeonButtonState(running) {
+    if (running) {
+        button.textContent = 'Stop Dungeon'
+        button.style.background = 'linear-gradient(180deg, #ff8a7a 0%, #b3261e 55%, #5e0d0d 100%)'
+        button.style.border = '1px solid #ffb0a8'
+        button.style.boxShadow = '0 0 12px rgba(255,70,70,0.45), inset 0 1px 0 rgba(255,255,255,0.18)'
+        button.style.color = '#fff0f0'
+        button.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)'
+    } else {
+        button.textContent = 'Run Dungeon'
+        button.style.background = 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)'
+        button.style.border = '1px solid #ffcf66'
+        button.style.boxShadow = '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
+        button.style.color = '#fff6d6'
+        button.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)'
+    }
+}
+
 function addNiceToolbar() {
     const container = document.createElement('span')
     container.style.display = 'inline-flex'
@@ -199,6 +217,7 @@ function addNiceToolbar() {
     button.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)'
     button.style.boxShadow = '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
     button.style.transition = '0.15s ease'
+    
     button.onmouseenter = () => {
         button.style.filter = 'brightness(1.12)'
     }
@@ -235,6 +254,8 @@ function addNiceToolbar() {
     container.appendChild(roomDecision)
     container.appendChild(roomRight)
     header.insertBefore(container, header.children[1])
+    
+    setDungeonButtonState(false)
 }
 
 /// MACRO RUNNER
@@ -419,11 +440,11 @@ async function runDungeonMacro() {
 
     if (isRunningMacro) {
         isRunningMacro = false
-        dungeonMacroButton.textContent = "Run Dungeon"
+        setDungeonButtonState(false)
         releaseWakeLock()
         return 
     } else {
-        dungeonMacroButton.textContent = "Stop Dungeon"
+        setDungeonButtonState(true)
         isRunningMacro = true
         enableWakeLock()
     }
@@ -509,7 +530,7 @@ async function runDungeonMacro() {
     }
     isRunningMacro = false
     releaseWakeLock()
-    dungeonMacroButton.textContent = "Run Dungeon"
+    setDungeonButtonState(false)
 }
 
 if (!document.getElementById('roomLeft')) {
