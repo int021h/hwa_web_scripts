@@ -104,6 +104,7 @@ function colorsAreSame(color1, color2, threshold = colorsMatchThreshold) {
 }
 
 function setDungeonButtonState(running) {
+    const buttond = dungeonMacroButton
     if (running) {
         button.textContent = 'Stop Dungeon'
         button.style.background = 'linear-gradient(180deg, #ff8a7a 0%, #b3261e 55%, #5e0d0d 100%)'
