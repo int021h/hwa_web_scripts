@@ -105,260 +105,43 @@ function colorsAreSame(color1, color2, threshold = colorsMatchThreshold) {
 
 function addNiceToolbar() {
     const container = document.createElement('span')
-
-container.style.display = 'inline-flex'
-
-container.style.alignItems = 'center'
-
-container.style.gap = '6px'
-
-container.style.padding = '4px 10px'
-
-container.style.marginLeft = '12px'
-
-container.style.border = '1px solid rgba(120,180,255,0.35)'
-
-container.style.borderRadius = '10px'
-
-container.style.background = 'linear-gradient(180deg, rgba(20,30,55,0.92) 0%, rgba(8,12,25,0.92) 100%)'
-
-container.style.boxShadow = '0 0 12px rgba(0,140,255,0.18)'
-
-container.style.color = '#d9ecff'
-
-container.style.fontSize = '14px'
-
-container.style.fontFamily = 'Trebuchet MS, Verdana, sans-serif'
-
-container.style.backdropFilter = 'blur(2px)'
-
-const selectStyle = (el) => {
-
-    el.style.background = 'linear-gradient(180deg, #31486d 0%, #1a2740 100%)'
-
-    el.style.color = '#eef7ff'
-
-    el.style.border = '1px solid #5ea8ff'
-
-    el.style.borderRadius = '6px'
-
-    el.style.padding = '2px 6px'
-
-    el.style.outline = 'none'
-
-    el.style.cursor = 'pointer'
-
-    el.style.boxShadow = '0 0 6px rgba(80,160,255,0.25)'
-
-}
-
-const selectFloors = document.createElement('select')
-
-selectFloors.id = 'maxFloors'
-
-selectStyle(selectFloors)
-
-const floors1 = document.createElement('option')
-
-floors1.value = '1'
-
-floors1.textContent = '1'
-
-const floors5 = document.createElement('option')
-
-floors5.value = '5'
-
-floors5.textContent = '5'
-
-const floors10 = document.createElement('option')
-
-floors10.value = '10'
-
-floors10.textContent = '10'
-
-const floors20 = document.createElement('option')
-
-floors20.value = '20'
-
-floors20.textContent = '20'
-
-const floors100 = document.createElement('option')
-
-floors100.value = '100'
-
-floors100.textContent = '100'
-
-const floors1000 = document.createElement('option')
-
-floors1000.value = '1000'
-
-floors1000.selected = true
-
-floors1000.textContent = '1000'
-
-selectFloors.append(
-
-    floors1,
-
-    floors5,
-
-    floors10,
-
-    floors20,
-
-    floors100,
-
-    floors1000
-
-)
-
-const select = document.createElement('select')
-
-select.id = 'stopHPLimit'
-
-selectStyle(select)
-
-const option1 = document.createElement('option')
-
-option1.value = '0'
-
-option1.textContent = 'If titan dies'
-
-option1.selected = true
-
-const option2 = document.createElement('option')
-
-option2.value = '30'
-
-option2.textContent = 'If HP < 30%'
-
-const option3 = document.createElement('option')
-
-option3.value = '50'
-
-option3.textContent = 'If HP < 50%'
-
-const option4 = document.createElement('option')
-
-option4.value = '100'
-
-option4.textContent = 'Never'
-
-select.append(option1, option2, option3, option4)
-
-const button = document.createElement('button')
-
-button.id = 'dungeonMacroButton'
-
-button.textContent = 'Run Dungeon'
-
-button.style.background =
-
-    'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)'
-
-button.style.color = '#fff6d6'
-
-button.style.border = '1px solid #ffcf66'
-
-button.style.borderRadius = '8px'
-
-button.style.padding = '4px 12px'
-
-button.style.fontWeight = 'bold'
-
-button.style.cursor = 'pointer'
-
-button.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)'
-
-button.style.boxShadow =
-
-    '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
-
-button.style.transition = '0.15s ease'
-
-button.onmouseenter = () => {
-
-    button.style.filter = 'brightness(1.12)'
-
-}
-
-button.onmouseleave = () => {
-
-    button.style.filter = 'brightness(1)'
-
-}
-
-button.addEventListener('click', runDungeonMacro)
-
-const createIndicator = (id, text, color) => {
-
-    const el = document.createElement('span')
-
-    el.id = id
-
-    el.textContent = text
-
-    el.style.fontWeight = 'bold'
-
-    el.style.color = color
-
-    el.style.textShadow = `0 0 8px ${color}`
-
-    
-
-    return el
-
-}
-
-const roomLeft = createIndicator('roomLeft', 'LEFT', '#6fd3ff')
-
-const roomDecision = document.createElement('span')
-
-roomDecision.id = 'roomDecision'
-
-roomDecision.textContent = '?'
-
-roomDecision.style.fontWeight = 'bold'
-
-roomDecision.style.color = '#ffd86a'
-
-roomDecision.style.textShadow = '0 0 10px rgba(255,216,106,0.7)'
-
-const roomRight = createIndicator('roomRight', 'RIGHT', '#ff8f8f')
-
-container.appendChild(document.createTextNode('Max floors:'))
-
-container.appendChild(selectFloors)
-
-container.appendChild(document.createTextNode('Stop:'))
-
-container.appendChild(select)
-
-container.appendChild(button)
-
-container.appendChild(roomLeft)
-
-container.appendChild(roomDecision)
-
-container.appendChild(roomRight)
-
-header.insertBefore(container, header.children[1])
-}
-
-function addDebugToolbar() {
-    const container = document.createElement('span')
+    container.style.display = 'inline-flex'
+    container.style.alignItems = 'center'
+    container.style.gap = '6px'
+    container.style.padding = '4px 10px'
+    container.style.marginLeft = '12px'
+    container.style.border = '1px solid rgba(120,180,255,0.35)'    
+    container.style.borderRadius = '10px'
+    container.style.background = 'linear-gradient(180deg, rgba(20,30,55,0.92) 0%, rgba(8,12,25,0.92) 100%)'
+    container.style.boxShadow = '0 0 12px rgba(0,140,255,0.18)'
+    container.style.color = '#d9ecff'    
+    container.style.fontSize = '14px'
+    container.style.fontFamily = 'Trebuchet MS, Verdana, sans-serif'
+    container.style.backdropFilter = 'blur(2px)'
+
+    const selectStyle = (el) => {
+        el.style.background = 'linear-gradient(180deg, #31486d 0%, #1a2740 100%)'
+        el.style.color = '#eef7ff'
+        el.style.border = '1px solid #5ea8ff'
+        el.style.borderRadius = '6px'
+        el.style.padding = '2px 6px'
+        el.style.outline = 'none'
+        el.style.cursor = 'pointer'
+        el.style.boxShadow = '0 0 6px rgba(80,160,255,0.25)'
+    }
 
     const selectFloors = document.createElement('select')
     selectFloors.id = 'maxFloors'
-    
+    selectStyle(selectFloors)
+
     const floors1 = document.createElement('option')
     floors1.value = '1'
     floors1.textContent = '1'
-    
+
     const floors5 = document.createElement('option')
     floors5.value = '5'
     floors5.textContent = '5'
-    
+
     const floors10 = document.createElement('option')
     floors10.value = '10'
     floors10.textContent = '10'
@@ -366,68 +149,90 @@ function addDebugToolbar() {
     const floors20 = document.createElement('option')
     floors20.value = '20'
     floors20.textContent = '20'
-    
+
     const floors100 = document.createElement('option')
     floors100.value = '100'
     floors100.textContent = '100'
-    
+
     const floors1000 = document.createElement('option')
     floors1000.value = '1000'
     floors1000.selected = true
     floors1000.textContent = '1000'
 
-    selectFloors.append(floors1, floors5, floors10, floors20, floors100, floors1000)
-    
+    selectFloors.append(
+        floors1,
+        floors5,
+        floors10,
+        floors20,
+        floors100,
+        floors1000
+    )
+
     const select = document.createElement('select')
     select.id = 'stopHPLimit'
-
+    selectStyle(select)
     const option1 = document.createElement('option')
     option1.value = '0'
     option1.textContent = 'If titan dies'
     option1.selected = true
-    
     const option2 = document.createElement('option')
     option2.value = '30'
     option2.textContent = 'If HP < 30%'
-    
     const option3 = document.createElement('option')
     option3.value = '50'
     option3.textContent = 'If HP < 50%'
-
     const option4 = document.createElement('option')
     option4.value = '100'
     option4.textContent = 'Never'
-
     select.append(option1, option2, option3, option4)
-    
+
     const button = document.createElement('button')
     button.id = 'dungeonMacroButton'
     button.textContent = 'Run Dungeon'
+    button.style.background = 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)'
+    button.style.color = '#fff6d6'
+    button.style.border = '1px solid #ffcf66'
+    button.style.borderRadius = '8px'
+    button.style.padding = '4px 12px'
+    button.style.fontWeight = 'bold'
+    button.style.cursor = 'pointer'
+    button.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)'
+    button.style.boxShadow = '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
+    button.style.transition = '0.15s ease'
+    button.onmouseenter = () => {
+        button.style.filter = 'brightness(1.12)'
+    }
+    button.onmouseleave = () => {
+        button.style.filter = 'brightness(1)'
+    }
     button.addEventListener('click', runDungeonMacro)
 
-    const roomLeft = document.createElement('span')
-    roomLeft.id = 'roomLeft'
-    roomLeft.textContent = 'LEFT'
+    const createIndicator = (id, text, color) => {
+        const el = document.createElement('span')
+        el.id = id
+        el.textContent = text
+        el.style.fontWeight = 'bold'
+        el.style.color = color
+        el.style.textShadow = `0 0 8px ${color}`
+        return el    
+    }
+    const roomLeft = createIndicator('roomLeft', 'LEFT', '#6fd3ff')
 
     const roomDecision = document.createElement('span')
     roomDecision.id = 'roomDecision'
-    roomDecision.textContent = ' ? '
-    
-    const roomRight = document.createElement('span')
-    roomRight.id = 'roomRight'
-    roomRight.textContent = 'RIGHT'
+    roomDecision.textContent = '?'
+    roomDecision.style.fontWeight = 'bold'
+    roomDecision.style.color = '#ffd86a'
+    roomDecision.style.textShadow = '0 0 10px rgba(255,216,106,0.7)'
 
-    container.appendChild(document.createTextNode(' Max floors: '))
+    const roomRight = createIndicator('roomRight', 'RIGHT', '#ff8f8f')
+    container.appendChild(document.createTextNode('Max floors:'))
     container.appendChild(selectFloors)
-    container.appendChild(document.createTextNode(' Stop: '))
+    container.appendChild(document.createTextNode('Stop:'))
     container.appendChild(select)
-    container.appendChild(document.createTextNode(' '))
     container.appendChild(button)
-    container.appendChild(document.createTextNode(' '))
     container.appendChild(roomLeft)
-    container.appendChild(document.createTextNode(' '))
     container.appendChild(roomDecision)
-    container.appendChild(document.createTextNode(' '))
     container.appendChild(roomRight)
     header.insertBefore(container, header.children[1])
 }
