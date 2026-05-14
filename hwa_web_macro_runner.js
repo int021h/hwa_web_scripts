@@ -1,4 +1,4 @@
-/// VERSION 1.0.4
+/// VERSION 1.0.5
 /// MACRO RUNNER - PASTE THIS CODE IN CONSOLE ONLY ONCE
 /// Send your ideas for improvements to Deidara/Phoenix Rebirth at Discord: @int021h
 const DEBUG_CLICKS = false
