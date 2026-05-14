@@ -7,6 +7,9 @@ const gameArea = gameCanvas.getBoundingClientRect()
 const canvasScaleX = gameCanvas.width / gameArea.width
 const canvasScaleY = gameCanvas.height / gameArea.height
 
+const touchStartListeners = getEventListeners(gameCanvas).touchstart
+const touchEndListeners = getEventListeners(gameCanvas).touchend
+    
 // MACRO stuff
 const actionClick = 1
 const actionDelay = 2
@@ -18,7 +21,8 @@ const actionInterruptIfColor = 6
 var isRunningMacro = false
 var lvlTitle = ""
 
-
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+    
 // Pixel color picker
 const colorsMatchThreshold = 10
 const gl = gameCanvas.getContext('webgl2')
@@ -270,7 +274,6 @@ function addNiceToolbar() {
 async function runActions(actions) {
     const target = gameCanvas
 
-    const sleep = ms => new Promise(r => setTimeout(r, ms))
     var skipActions = 0
     var prevClickAction = actions[0]
     for (const action of actions) {
@@ -370,39 +373,9 @@ async function runActions(actions) {
             } else {
                 roomDecision.textContent = "<-"
             }
-        } else if (actionType == actionClick) {
-            target.focus()
+        } else if (actionType == actionClick) {            
             prevClickAction = action
-            const touch = new Touch({
-                identifier: Date.now(),
-                target,
-                clientX: gameArea.x + gameArea.width * x,
-                clientY: gameArea.y + gameArea.height * y,
-                radiusX: 2,
-                radiusY: 2,
-                rotationAngle: 0,
-                force: 1
-            })
-
-            const touchStart = new TouchEvent('touchstart', {
-                bubbles: true,
-                cancelable: true,
-                touches: [touch],
-                targetTouches: [touch],
-                changedTouches: [touch]
-            })
-
-            const touchEnd = new TouchEvent('touchend', {
-                bubbles: true,
-                cancelable: true,
-                touches: [],
-                targetTouches: [],
-                changedTouches: [touch]
-            })
-
-            target.dispatchEvent(touchStart)
-            await sleep(50)
-            target.dispatchEvent(touchEnd)
+            await runUnityInput(target, x, y)
             if (delay > 0) {
                 await sleep(delay)
             }
@@ -410,11 +383,95 @@ async function runActions(actions) {
     }
 }
 
+async function runActionClick(target, x, y) {
+    target.focus()
+    const touch = new Touch({
+        identifier: Date.now(),
+        target,
+        clientX: gameArea.x + gameArea.width * x,
+        clientY: gameArea.y + gameArea.height * y,
+        radiusX: 2,
+        radiusY: 2,
+        rotationAngle: 0,
+        force: 1
+    })
+
+    const touchStart = new TouchEvent('touchstart', {
+        bubbles: true,
+        cancelable: true,
+        touches: [touch],
+        targetTouches: [touch],
+        changedTouches: [touch]
+    })
+
+    const touchEnd = new TouchEvent('touchend', {
+        bubbles: true,
+        cancelable: true,
+        touches: [],
+        targetTouches: [],
+        changedTouches: [touch]
+    })
+
+    target.dispatchEvent(touchStart)
+    await sleep(50)
+    target.dispatchEvent(touchEnd)
+}
+
+async function runUnityInput(canvas, x, y) {
+    const cx = gameArea.left + x * gameArea.width
+    const cy = gameArea.top + y * gameArea.height
+
+    function fireMouse(type, buttons = 0) {
+        const e = new MouseEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: cx,
+            clientY: cy,
+            button: 0,
+            buttons
+        })
+        canvas.dispatchEvent(e)
+    }
+
+    function fireTouch(type) {
+        const touch = {
+            identifier: Date.now(),
+            target: canvas,
+            clientX: cx,
+            clientY: cy,
+            pageX: cx,
+            pageY: cy,
+            screenX: cx,
+            screenY: cy
+        }
+        const e = new Event(type, {
+            bubbles: true,
+            cancelable: true
+        })
+        if (type !== 'touchend') {
+            e.touches = [touch]
+            e.targetTouches = [touch]
+        } else {
+            e.touches = []
+            e.targetTouches = []
+        }
+        e.changedTouches = [touch]
+        canvas.dispatchEvent(e)
+    }
+
+    fireMouse('mousedown', 1)
+    fireTouch('touchstart')
+    await sleep(30)
+    fireMouse('mouseup', 0)
+    fireMouse('click', 0)
+    fireTouch('touchend')
+}
+
 async function logMouse(e) {
     const gameX = e.clientX - gameArea.x
     const gameY = e.clientY - gameArea.y
 
-    const sleep = ms => new Promise(r => setTimeout(r, ms))
     await sleep(1000)
 
     const pixel = await readPixelOnDraw(gameX * canvasScaleX, gameY * canvasScaleY, 100)
