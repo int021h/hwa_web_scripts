@@ -22,31 +22,38 @@ var lvlTitle = ""
 // Pixel color picker
 const colorsMatchThreshold = 10
 const gl = gameCanvas.getContext('webgl2')
-const originalRAF = window.requestAnimationFrame
-let pendingRead = null
-const pixels = new Uint8Array(4)
 var readPixelsOnce = 0
 var readX = 0
 var readY = 0
 
+const originalRAF = window.requestAnimationFrame.bind(window)
+const pixels = new Uint8Array(4)
+let pendingRead = null
 
 window.requestAnimationFrame = function(callback) {
-    return originalRAF.call(window, onFrame)
-    function onFrame(time) {
+    return originalRAF(function(time) {
         callback(time)
-        if (!pendingRead) return
+        const req = pendingRead
+        if (!req) return
+        pendingRead = null
+
         gl.readPixels(
-            pendingRead.x,
-            gl.canvas.height - pendingRead.y,
+            req.x,
+            gl.canvas.height - req.y,
             1,
             1,
             gl.RGBA,
             gl.UNSIGNED_BYTE,
             pixels
         )
-        pendingRead.resolve(new Uint8Array(pixels))
-        pendingRead = null
-    }
+
+        req.resolve([
+            pixels[0],
+            pixels[1],
+            pixels[2],
+            pixels[3]
+        ])
+    })
 }
 
 function readPixelOnDraw(x, y) {
