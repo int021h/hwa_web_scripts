@@ -12,6 +12,22 @@
 (async function() {
     'use strict';
 
+    /// ======== OPTIONS ==========
+
+    const GAME_LOAD_TIMEOUT = 20000; // script starts in 20 seconds after page is loaded
+
+    const DEBUG_CLICKS = false
+
+    const DEFAULT_ORDER = [
+        { id: 'mixed', label: '⚡', color: '#FFC107', dColor: '#806104', bColor: '#806104' },
+        { id: 'water', label: '💧', color: '#2196F3', dColor: '#104B7A', bColor: '#104B7A' },
+        { id: 'earth', label: '🍀', color: '#4CAF50', dColor: '#265828', bColor: '#265828' },
+        { id: 'fire', label: '🔥', color: '#F44336', dColor: '#7A211B', bColor: '#7A211B' },
+    ]
+
+
+    // ========= CRASH HANDLERS =========
+
     window.addEventListener('unhandledrejection', (e) => {
         const msg = String(e.reason);
         if (msg.includes('OOM') || msg.includes('memory access out of bounds') || msg.includes('Internal Server Error')) {
@@ -28,19 +44,17 @@
         return originalError.apply(console, args);
     };
 
+    // ===== WAITING UNTIL GAME INITIALIZED =====
     const check = setInterval(async () => {
         const canvas = document.getElementById('gameCanvas')
         if (canvas) {
             clearInterval(check)
-            setTimeout(async () => await startMainScript(canvas), 20000)
+            setTimeout(async () => await startMainScript(canvas), GAME_LOAD_TIMEOUT)
         }
     }, 200)
 
     async function startMainScript(gameCanvas) {
-        /// VERSION 1.0.5
-        /// MACRO RUNNER - PASTE THIS CODE IN CONSOLE ONLY ONCE
-        /// Send your ideas for improvements to Deidara/Phoenix Rebirth at Discord: @int021h
-        const DEBUG_CLICKS = false
+        /// Send your ideas for improvements to HWA: Deidara/Phoenix Rebirth or to Discord: @int021h
 
         let gameArea = gameCanvas.getBoundingClientRect()
         let canvasScaleX = gameCanvas.width / gameArea.width
@@ -69,6 +83,7 @@
         const pixels = new Uint8Array(4)
         let pendingRead = null
         const originalRAF = window.requestAnimationFrame.bind(window)
+
         window.requestAnimationFrame = function(callback) {
             return originalRAF(function(time) {
                 try {
@@ -123,27 +138,18 @@
             wakeLock = null
         }
 
-        // ROOM Element detection
-        function getElementName(category) {
-            if (category == 1) return 'Fire'
-            if (category == 2) return 'Earth'
-            if (category == 3) return 'Water'
-            if (category == 4) return 'Mixed'
-            return '?'
-        }
-
         function getColorCategory(pixel) {
             const [r, g, b, a] = pixel
             if (r > 195 && r < 240 && g > 200 && b < 100) {
-                return 4 // gray
+                return 'mixed' // gray
             }
             if (r >= g && r >= b) {
-                return 1 // red
+                return 'fire' // red
             }
             if (g >= r && g >= b) {
-                return 2 // green
+                return 'earth' // green
             }
-            return 3 // blue
+            return 'water' // blue
         }
 
         function colorsAreSame(color1, color2, threshold = colorsMatchThreshold) {
@@ -290,33 +296,165 @@
             }
             button.addEventListener('click', runDungeonMacro)
 
-            const createIndicator = (id, text, color) => {
-                const el = document.createElement('span')
-                el.id = id
-                el.textContent = text
-                el.style.fontWeight = 'bold'
-                el.style.color = color
-                el.style.textShadow = `0 0 8px ${color}`
-                return el
+
+            //// =========== ELEMENTS PRIORITY =========== ////
+            const STORAGE_KEY = 'elements_priority'
+
+            // ---------- container ----------
+            const elements = document.createElement('div')
+            elements.id = 'elementsPriorityToolbar'
+            Object.assign(elements.style, {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                userSelect: 'none',
+                zIndex: '999999'
+            })
+
+            // ---------- storage ----------
+            function loadOrder() {
+                try {
+                    const saved = JSON.parse(
+                        localStorage.getItem(STORAGE_KEY)
+                    )
+                    if (!Array.isArray(saved)) {
+                        return DEFAULT_ORDER
+                    }
+                    const mapped = saved
+                    .map(id => DEFAULT_ORDER.find(x => x.id === id))
+                    .filter(Boolean)
+                    if (mapped.length !== DEFAULT_ORDER.length) {
+                        return DEFAULT_ORDER
+                    }
+                    return mapped
+                } catch {
+                    return DEFAULT_ORDER
+                }
             }
-            const roomLeft = createIndicator('roomLeft', 'LEFT', '#6fd3ff')
 
-            const roomDecision = document.createElement('span')
-            roomDecision.id = 'roomDecision'
-            roomDecision.textContent = '?'
-            roomDecision.style.fontWeight = 'bold'
-            roomDecision.style.color = '#ffd86a'
-            roomDecision.style.textShadow = '0 0 10px rgba(255,216,106,0.7)'
+            let elementsOrder = loadOrder()
+            function saveOrder() {
+                localStorage.setItem(
+                    STORAGE_KEY,
+                    JSON.stringify(elementsOrder.map(x => x.id))
+                )
+            }
 
-            const roomRight = createIndicator('roomRight', 'RIGHT', '#ff8f8f')
-            container.appendChild(document.createTextNode('Max floors:'))
+            // ---------- render ----------
+            function render() {
+                elements.innerHTML = ''
+                elementsOrder.forEach((item, index) => {
+                    const el = document.createElement('div')
+                    el.draggable = true
+                    el.dataset.index = index
+                    el.dataset.id = item.id
+                    el.textContent = item.label
+                    Object.assign(el.style, {
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        cursor: 'grab',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'sans-serif',
+                        fontSize: '12px',
+                        fontWeight: 'normal',
+                        background: `linear-gradient(to bottom, ${item.dColor}, ${item.color})`,
+                        color: item.textColor || 'white',
+                        border: `2px solid ${item.bColor}`,
+                        boxSizing: 'border-box',
+                        transition: 'transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease'
+                    })
+                    el.addEventListener('dragstart', onDragStart)
+                    el.addEventListener('dragover', onDragOver)
+                    el.addEventListener('drop', onDrop)
+                    el.addEventListener('dragend', onDragEnd)
+                    elements.appendChild(el)
+                })
+            }
+
+            // ---------- drag ----------
+            let dragIndex = null
+            function onDragStart(e) {
+                dragIndex = Number(e.target.dataset.index)
+                e.target.style.opacity = '0.5'
+                e.target.style.transform = 'scale(1.15)'
+            }
+            function onDragOver(e) {
+                e.preventDefault()
+            }
+            function onDrop(e) {
+                e.preventDefault()
+                const dropIndex = Number(e.target.dataset.index)
+                if (
+                    dragIndex === null ||
+                    dragIndex === dropIndex
+                ) {
+                    return
+                }
+                const moved = elementsOrder.splice(dragIndex, 1)[0]
+                elementsOrder.splice(dropIndex, 0, moved)
+                saveOrder()
+                render()
+            }
+
+            function onDragEnd(e) {
+                e.target.style.opacity = '1'
+                e.target.style.transform = 'scale(1)'
+            }
+
+            // ---------- glow animation ----------
+            let animationFrame = null
+            let glowPhase = 0
+            function animateGlow() {
+                glowPhase += 0.08
+                const intensity =
+                      0.5 + (Math.sin(glowPhase) + 1) / 2
+                document
+                    .querySelectorAll('.element-circle-active')
+                    .forEach(el => {
+                    el.style.transform =
+                        `scale(${1 + intensity * 0.12})`
+                    el.style.boxShadow =
+                        `0 0 ${8 + intensity * 10}px white`
+                })
+                animationFrame = requestAnimationFrame(animateGlow)
+            }
+            animateGlow()
+            // ---------- public API ----------
+            window.setActiveElements = function(ids) {
+                document
+                    .querySelectorAll('#elementsPriorityToolbar > div')
+                    .forEach(el => {
+                    if (ids.includes(el.dataset.id)) {
+                        if (el.dataset.id == ids[0]) {
+                            el.classList.add('element-circle-active')
+                        } else {
+                            el.style.transform = `scale(1.05)`
+                            el.style.boxShadow = `0 0 8px white`
+                        }
+                    } else {
+                        el.classList.remove('element-circle-active')
+                        el.style.boxShadow = 'none'
+                        el.style.transform = 'scale(1)'
+                    }
+                })
+            }
+
+            window.getElementsPriority = function() {
+                return elementsOrder.map(x => x.id)
+            }
+
+            render()
+
+            container.appendChild(document.createTextNode('Priority:'))
+            container.appendChild(elements)
+            container.appendChild(document.createTextNode('Floors:'))
             container.appendChild(selectFloors)
             container.appendChild(document.createTextNode('Stop:'))
             container.appendChild(select)
             container.appendChild(button)
-            container.appendChild(roomLeft)
-            container.appendChild(roomDecision)
-            container.appendChild(roomRight)
 
             const header = document.getElementById('header')
             header.insertBefore(container, header.children[1])
@@ -392,10 +530,8 @@
                     )
                     if (colorsAreSame(testPixel, color, 10)) {
                         skipUntilAction = title
-                        console.log("skipping actions until:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
+                        console.log("Room detected. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
                     } else {
-                        console.log("this action is not for this gate:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "=", color[0], color[1], color[2])
-                        //await runUnityInput(target, x, y)
                         sleep(100)
                     }
                 } else if (actionType == actionWaitForColor) {
@@ -437,21 +573,19 @@
                     )
                     let rightCategory = getColorCategory(rightPixel)
                     let rightColor = `rgb(${rightPixel[0]}, ${rightPixel[1]}, ${rightPixel[2]})`
-
-                    const roomLeft = document.getElementById('roomLeft')
-                    const roomRight = document.getElementById('roomRight')
-                    const roomDecision = document.getElementById('roomDecision')
-                    roomLeft.style.color = leftColor
-
-                    roomRight.style.color = rightColor
-                    roomLeft.textContent = getElementName(leftCategory)
-                    roomRight.textContent = getElementName(rightCategory)
-
-                    if (rightCategory >= leftCategory) {
+                    const priority = window.getElementsPriority()
+                    const chooseRight = priority.indexOf(rightCategory) <= priority.indexOf(leftCategory)
+                    if (chooseRight) {
                         skipActions = 1
-                        roomDecision.textContent = "->"
+                    }
+                    if (leftCategory != rightCategory) {
+                        if (chooseRight) {
+                            window.setActiveElements([rightCategory, leftCategory])
+                        } else {
+                            window.setActiveElements([leftCategory, rightCategory])
+                        }
                     } else {
-                        roomDecision.textContent = "<-"
+                        window.setActiveElements([])
                     }
                 } else if (actionType == actionClick) {
                     prevClickAction = action
