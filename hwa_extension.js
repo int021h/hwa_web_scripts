@@ -25,6 +25,13 @@
         { id: 'fire', label: '🔥', color: '#F44336', dColor: '#7A211B', bColor: '#7A211B' },
     ]
 
+    const actionClick = 1
+    const actionDelay = 2
+    const actionChooseRoom = 3
+    const actionTitle = 4
+    const actionWaitForColor = 5
+    const actionInterruptIfColor = 6
+    const actionJump = 7
 
     // ========= CRASH HANDLERS =========
 
@@ -61,13 +68,6 @@
         let canvasScaleY = gameCanvas.height / gameArea.height
 
         // MACRO stuff
-        const actionClick = 1
-        const actionDelay = 2
-        const actionChooseRoom = 3
-        const actionTitle = 4
-        const actionWaitForColor = 5
-        const actionInterruptIfColor = 6
-        const actionJump = 7
 
         let isRunningMacro = false
         let lvlTitle = ""
