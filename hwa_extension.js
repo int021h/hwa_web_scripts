@@ -431,6 +431,7 @@
                         if (el.dataset.id == ids[0]) {
                             el.classList.add('element-circle-active')
                         } else {
+                            el.classList.remove('element-circle-active')
                             el.style.transform = `scale(1.05)`
                             el.style.boxShadow = `0 0 8px white`
                         }
