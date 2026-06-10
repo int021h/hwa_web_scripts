@@ -14,17 +14,17 @@ toolbar will appear with dungeon settings
 tap "Run dungeon" while you're on any dungeon level
 
 For infinite dungeon you need:
-strong Moloch and Araji for Fire rooms
-strong Angus for Earth rooms
-middle Sigurd for Water rooms
+- strong Moloch and Araji for Fire rooms
+- strong Angus for Earth rooms
+- middle Sigurd for Water rooms
+
 For mixed rooms use any healers you have with Moloch: 
-Sigurd Mairi Tydus Hyperion + Moloch
-Brustar Tenebris Mort Umbra +  Moloch
-Rigel Lumira Aiyari Solaris +  Moloch
+- Sigurd Mairi Tydus Hyperion + Moloch
+- Brustar Tenebris Mort Umbra +  Moloch
+- Rigel Lumira Aiyari Solaris +  Moloch
 
 Script above:
-uses only auto-battle
-choses correct room in priority: Mixed, Water, Earth, Fire (can be changed)
-waits for confirmation after each click or game lag
-can collect 150k titanite (up to 2.2M titan potions) per day
-Scripts for Hero Wars: Alliance
+- uses only auto-battle
+- choses correct room in priority: Mixed, Water, Earth, Fire (can be changed)
+- waits for confirmation after each click or game lag
+- can collect 150k titanite (up to 2.2M titan potions) per day
