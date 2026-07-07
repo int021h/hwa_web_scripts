@@ -16,7 +16,7 @@
 
     const GAME_LOAD_TIMEOUT = 20000; // script starts in 20 seconds after page is loaded
 
-    const DEBUG_CLICKS = false
+    let DEBUG_CLICKS = false
 
     const DEFAULT_ORDER = [
         { id: 'mixed', label: '⚡', color: '#FFC107', dColor: '#806104', bColor: '#806104' },
@@ -296,6 +296,28 @@
             }
             button.addEventListener('click', runDungeonMacro)
 
+            const customButton = document.createElement('button')
+            customButton.id = 'customMacroButton'
+            customButton.textContent = '👀 Debug clicks'
+            customButton.style.background = 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)'
+            customButton.style.color = '#fff6d6'
+            customButton.style.border = '1px solid #ffcf66'
+            customButton.style.borderRadius = '8px'
+            customButton.style.padding = '4px 12px'
+            customButton.style.fontWeight = 'bold'
+            customButton.style.cursor = 'pointer'
+            customButton.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)'
+            customButton.style.boxShadow = '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
+            customButton.style.transition = '0.15s ease'
+
+            customButton.onmouseenter = () => {
+                customButton.style.filter = 'brightness(1.12)'
+            }
+            customButton.onmouseleave = () => {
+                customButton.style.filter = 'brightness(1)'
+            }
+            customButton.addEventListener('click', toggleDebug)
+
 
             //// =========== ELEMENTS PRIORITY =========== ////
             const STORAGE_KEY = 'elements_priority'
@@ -456,6 +478,7 @@
             container.appendChild(document.createTextNode('Stop:'))
             container.appendChild(select)
             container.appendChild(button)
+            container.appendChild(customButton)
 
             const header = document.getElementById('header')
             header.insertBefore(container, header.children[1])
@@ -649,6 +672,8 @@
             fireTouch('touchend')
         }
 
+        window.clicks = new Array()
+
         async function logMouse(e) {
             const gameX = e.clientX - gameArea.x
             const gameY = e.clientY - gameArea.y
@@ -660,17 +685,16 @@
             const g = pixel[1]
             const b = pixel[2]
             const a = pixel[3]
-
+            const x = Number((gameX / gameArea.width).toFixed(6))
+            const y = Number((gameY / gameArea.height).toFixed(6))
             const clickObj = {
-                x: gameX / gameArea.width,
-                y: gameY / gameArea.height,
+                x: x,
+                y: y,
                 color: [r,g,b],
-                delay: 100,
-                action: actionClick
             }
-
-            console.log(JSON.stringify(clickObj))
-            document.body.style.setProperty('--bg-color', `rgba(${r}, ${g}, ${b}, ${a / 255})`)
+            document.title = JSON.stringify(clickObj)
+            //console.log(JSON.stringify(clickObj))
+            //document.body.style.setProperty('--bg-color', `rgba(${r}, ${g}, ${b}, ${a / 255})`)
         }
 
 
@@ -832,7 +856,58 @@
             setDungeonButtonState(false)
         }
 
-        if (DEBUG_CLICKS) gameCanvas.addEventListener('click', logMouse)
+        async function runCustomMacro() {
+            if (isRunningMacro) {
+                releaseWakeLock()
+                isRunningMacro = false
+                return
+            }
+            enableWakeLock()
+            gameArea = gameCanvas.getBoundingClientRect()
+            canvasScaleX = gameCanvas.width / gameArea.width
+            canvasScaleY = gameCanvas.height / gameArea.height
+
+            function delay(msec) {
+                return {x: 2, y: 2, delay: msec, actionType: actionDelay}
+            }
+
+            const openFrontier = {x: 0.4566854990583804, y: 0.3443298969072165, delay: 500, action: actionClick}
+            const clickToBattle = {x: 0.9096045197740112, y: 0.8886597938144329, delay: 200, action: actionClick}
+            const clickAutoBattle = {x: 0.8935969868173258, y: 0.7608247422680412, delay: 200, action: actionClick}
+            const clickContinue = {x: 0.9030131826741996, y: 0.8907216494845361, delay :200, action: actionClick}
+            isRunningMacro = true
+            runActions([openFrontier, delay(1000)])
+
+            for(let i=0; i<300; i++) {
+                if (!isRunningMacro) return
+                await runActions([clickToBattle, clickAutoBattle, clickContinue, delay(1000)])
+            }
+            releaseWakeLock()
+            isRunningMacro = false
+        }
+
+        async function toggleDebug() {
+            DEBUG_CLICKS = !DEBUG_CLICKS
+            const button = document.getElementById('customMacroButton')
+            if (DEBUG_CLICKS) {
+                button.textContent = '🚫 Stop debug'
+                button.style.background = 'linear-gradient(180deg, #ff8a7a 0%, #b3261e 55%, #5e0d0d 100%)'
+                button.style.border = '1px solid #ffb0a8'
+                button.style.boxShadow = '0 0 12px rgba(255,70,70,0.45), inset 0 1px 0 rgba(255,255,255,0.18)'
+                button.style.color = '#fff0f0'
+                button.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)'
+                gameCanvas.addEventListener('click', logMouse)
+            } else {
+                button.textContent = '👀 Debug clicks'
+                button.style.background = 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)'
+                button.style.border = '1px solid #ffcf66'
+                button.style.boxShadow = '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
+                button.style.color = '#fff6d6'
+                button.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)'
+                gameCanvas.removeEventListener('click', logMouse)
+            }
+        }
+
 
         addNiceToolbar()
 
