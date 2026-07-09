@@ -25,13 +25,19 @@
         { id: 'fire', label: '🔥', color: '#F44336', dColor: '#7A211B', bColor: '#7A211B' },
     ]
 
-    const actionClick = 1
+    // service actions
+    const actionTitle = 1
     const actionDelay = 2
-    const actionChooseRoom = 3
-    const actionTitle = 4
-    const actionWaitForColor = 5
-    const actionInterruptIfColor = 6
-    const actionJump = 7
+    const actionJump = 3
+
+    // clicker
+    const actionClick = 4
+
+    // actions with some logic
+    const actionChooseRoom = 5
+    const actionWaitForColor = 6
+    const actionInterruptIfColor = 7
+    const actionInterruptIfNotColor = 8
 
     // ========= CRASH HANDLERS =========
 
@@ -316,6 +322,7 @@
             customButton.onmouseleave = () => {
                 customButton.style.filter = 'brightness(1)'
             }
+            //customButton.addEventListener('click', runCustomMacro)
             customButton.addEventListener('click', toggleDebug)
 
 
@@ -542,6 +549,19 @@
                             gameArea.height * y * canvasScaleY,
                         )
                         if (colorsAreSame(testPixel, color)) {
+                            isRunningMacro = false
+                            console.log(lvlTitle, ":", i+1, "titan's HP is tooo low to continue")
+                            return
+                        }
+                    }
+                } else if (actionType == actionInterruptIfNotColor) {
+                    for (let i = 0; i<xx.length; i++) {
+                        let testPixel = []
+                        testPixel = await readPixelOnDraw(
+                            gameArea.width * xx[i] * canvasScaleX,
+                            gameArea.height * y * canvasScaleY,
+                        )
+                        if (!colorsAreSame(testPixel, color)) {
                             isRunningMacro = false
                             console.log(lvlTitle, ":", i+1, "titan's HP is tooo low to continue")
                             return
@@ -777,7 +797,7 @@
             let checkHP = title("check titans HP")
 
             if (titansHP[0] > 0) {
-                checkHP = {x: 0, xx: titansHP, y: 0.461, color: [26,16,6], actionType: actionInterruptIfColor, title: "Check titans HP"}
+                checkHP = {x: 0, xx: titansHP, y: 0.461, color: [56,199,28], actionType: actionInterruptIfNotColor, title: "Check titans HP"}
             }
 
             const confirmBattle = {x: 0.641372, y: 0.822323, delay: 1000, actionType: actionClick, title: "clicking on confirm battle result"}
@@ -871,16 +891,20 @@
                 return {x: 2, y: 2, delay: msec, actionType: actionDelay}
             }
 
+            const clickBuyTitanPotion = {x: 0.423, y: 0.808, delay: 300, action: actionClick}
+            const clickBuyHorns = {x: 0.42, y: 0.34, delay: 300, action: actionClick}
             const openFrontier = {x: 0.4566854990583804, y: 0.3443298969072165, delay: 500, action: actionClick}
             const clickToBattle = {x: 0.9096045197740112, y: 0.8886597938144329, delay: 200, action: actionClick}
             const clickAutoBattle = {x: 0.8935969868173258, y: 0.7608247422680412, delay: 200, action: actionClick}
             const clickContinue = {x: 0.9030131826741996, y: 0.8907216494845361, delay :200, action: actionClick}
             isRunningMacro = true
-            runActions([openFrontier, delay(1000)])
+            //runActions([openFrontier, delay(1000)])
 
-            for(let i=0; i<300; i++) {
+            for(let i=0; i<10000; i++) {
                 if (!isRunningMacro) return
-                await runActions([clickToBattle, clickAutoBattle, clickContinue, delay(1000)])
+                //await runActions([clickBuyTitanPotion])
+                await runActions([clickBuyHorns])
+                //await runActions([clickToBattle, clickAutoBattle, clickContinue, delay(1000)])
             }
             releaseWakeLock()
             isRunningMacro = false
