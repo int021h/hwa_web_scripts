@@ -494,7 +494,7 @@
         }
 
         /// MACRO RUNNER
-        async function runActions(actions, maxRetries = 1) {
+        async function runActions(actions, maxRetries = 2) {
             const target = gameCanvas
 
             let skipUntilAction = null
