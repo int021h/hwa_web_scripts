@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-05-14
+// @version      2026-07-13
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
