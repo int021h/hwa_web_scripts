@@ -826,7 +826,7 @@
                 await runActions([
                     {"delay": 10000, "action": actionDelay, title: "waiting until game is loaded"},
                     {"x": 0.488909426987061, "y":0.9969635627530364, "color":[56,37,2], "delay": 100, "action": actionWaitForColor, title: "checking if we are still on home screen"},
-                    {"x": 0.5730129390018485, "y": 0.8937246963562753, "action": actionClick, delay: 1000, "title": "click on guild"},
+                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 1000, "title": "click on guild"},
                     {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: 4000, "title": "click on dungeon"},
                 ])
             }
