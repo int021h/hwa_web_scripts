@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-07-13
+// @version      2026-07-21
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -28,16 +28,18 @@
     // service actions
     const actionTitle = 1
     const actionDelay = 2
-    const actionJump = 3
+    const actionJumpIf = 3
+    const actionJumpIfNot = 4
 
     // clicker
-    const actionClick = 4
+    const actionClick = 10
+    const actionDragDrop = 1
 
     // actions with some logic
-    const actionChooseRoom = 5
-    const actionWaitForColor = 6
-    const actionInterruptIfColor = 7
-    const actionInterruptIfNotColor = 8
+    const actionChooseRoom = 21
+    const actionWaitForColor = 22
+    const actionInterruptIfColor = 23
+    const actionInterruptIfNotColor = 24
 
     // ========= CRASH HANDLERS =========
 
@@ -77,8 +79,9 @@
 
         let isRunningMacro = false
         let lvlTitle = ""
+        let delayFactor = restoreFloat("delayFactor", 1.0)
 
-        const sleep = ms => new Promise(r => setTimeout(r, ms))
+        const sleep = ms => new Promise(r => setTimeout(r, Math.round(ms * delayFactor)))
 
         // Pixel color picker
         const colorsMatchThreshold = 10
@@ -89,6 +92,7 @@
         const pixels = new Uint8Array(4)
         let pendingRead = null
         const originalRAF = window.requestAnimationFrame.bind(window)
+
 
         window.requestAnimationFrame = function(callback) {
             return originalRAF(function(time) {
@@ -185,7 +189,6 @@
         }
 
         function addNiceToolbar() {
-            const floors = restoreInt("maxFloors", 1000)
             const hpLimit = restoreInt("stopHPLimit", 0)
 
             const container = document.createElement('span')
@@ -215,47 +218,47 @@
             }
 
 
-            const selectFloors = document.createElement('select')
-            selectFloors.id = 'maxFloors'
-            selectStyle(selectFloors)
+            const selectFactor = document.createElement('select')
+            selectFactor.id = 'delayFactor'
+            selectStyle(selectFactor)
 
-            const floors1 = document.createElement('option')
-            floors1.value = '1'
-            floors1.selected = floors == 1
-            floors1.textContent = '1'
+            const factor1 = document.createElement('option')
+            factor1.value = '1.0'
+            factor1.selected = delayFactor == 1.0
+            factor1.textContent = '1x'
 
-            const floors5 = document.createElement('option')
-            floors5.value = '5'
-            floors5.selected = floors == 5
-            floors5.textContent = '5'
+            const factor11 = document.createElement('option')
+            factor11.value = '1.1'
+            factor11.selected = delayFactor == 1.1
+            factor11.textContent = '1.1x'
 
-            const floors10 = document.createElement('option')
-            floors10.value = '10'
-            floors10.selected = floors == 10
-            floors10.textContent = '10'
+            const factor12 = document.createElement('option')
+            factor12.value = '1.2'
+            factor12.selected = delayFactor == 1.2
+            factor12.textContent = '1.2x'
 
-            const floors20 = document.createElement('option')
-            floors20.value = '20'
-            floors20.selected = floors == 20
-            floors20.textContent = '20'
+            const factor15 = document.createElement('option')
+            factor15.value = '1.5'
+            factor15.selected = delayFactor == 1.5
+            factor15.textContent = '1.5x'
 
-            const floors100 = document.createElement('option')
-            floors100.value = '100'
-            floors100.selected = floors == 100
-            floors100.textContent = '100'
+            const factor20 = document.createElement('option')
+            factor20.value = '2.0'
+            factor20.selected = delayFactor == 2.0
+            factor20.textContent = '2x'
 
-            const floors1000 = document.createElement('option')
-            floors1000.value = '1000'
-            floors1000.selected = floors == 1000
-            floors1000.textContent = '1000'
+            const factor30 = document.createElement('option')
+            factor30.value = '3.0'
+            factor30.selected = delayFactor == 3.0
+            factor30.textContent = '3x'
 
-            selectFloors.append(
-                floors1,
-                floors5,
-                floors10,
-                floors20,
-                floors100,
-                floors1000
+            selectFactor.append(
+                factor1,
+                factor11,
+                factor12,
+                factor15,
+                factor20,
+                factor30
             )
 
             const select = document.createElement('select')
@@ -304,7 +307,7 @@
 
             const customButton = document.createElement('button')
             customButton.id = 'customMacroButton'
-            customButton.textContent = '👀 Debug clicks'
+            customButton.textContent = '👀'
             customButton.style.background = 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)'
             customButton.style.color = '#fff6d6'
             customButton.style.border = '1px solid #ffcf66'
@@ -324,6 +327,7 @@
             }
             //customButton.addEventListener('click', runCustomMacro)
             customButton.addEventListener('click', toggleDebug)
+            //customButton.addEventListener('click', runFrontier)
 
 
             //// =========== ELEMENTS PRIORITY =========== ////
@@ -480,8 +484,8 @@
 
             container.appendChild(document.createTextNode('Priority:'))
             container.appendChild(elements)
-            container.appendChild(document.createTextNode('Floors:'))
-            container.appendChild(selectFloors)
+            container.appendChild(document.createTextNode('Delays:'))
+            container.appendChild(selectFactor)
             container.appendChild(document.createTextNode('Stop:'))
             container.appendChild(select)
             container.appendChild(button)
@@ -489,6 +493,11 @@
 
             const header = document.getElementById('header')
             header.insertBefore(container, header.children[1])
+
+            header.children[0].id = 'errorContainer'
+            header.children[0].style.color = 'red'
+            header.children[0].style.fontSize = '8px'
+            header.children[0].style.maxWidth = '150px'
 
             setDungeonButtonState(false)
         }
@@ -514,6 +523,7 @@
                     xx = [],
                     color = [],
                     altX = 0,
+                    altY = 0,
                     delay = 0,
                     title = "",
                     actionType = actionClick
@@ -532,7 +542,7 @@
                     continue
                 }
 
-                if (title != "" && actionType != actionJump) {
+                if (title != "" && actionType != actionJumpIf && actionType != actionJumpIfNot) {
                     document.title = lvlTitle + ": " + title
                     console.log(document.title)
                 }
@@ -567,7 +577,7 @@
                             return
                         }
                     }
-                } else if (actionType == actionJump) {
+                } else if (actionType == actionJumpIf) {
                     let testPixel = await readPixelOnDraw(
                         gameArea.width * x * canvasScaleX,
                         gameArea.height * y * canvasScaleY,
@@ -575,6 +585,17 @@
                     if (colorsAreSame(testPixel, color, 10)) {
                         skipUntilAction = title
                         console.log("Room detected. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
+                    } else {
+                        sleep(100)
+                    }
+                } else if (actionType == actionJumpIfNot) {
+                    let testPixel = await readPixelOnDraw(
+                        gameArea.width * x * canvasScaleX,
+                        gameArea.height * y * canvasScaleY,
+                    )
+                    if (!colorsAreSame(testPixel, color, 10)) {
+                        skipUntilAction = title
+                        console.log("Conditional jump. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "==", color[0], color[1], color[2])
                     } else {
                         sleep(100)
                     }
@@ -593,12 +614,14 @@
                         if (maxDelay <= 0) {
                             // =========== didn't see the required color => try to click again and wait one more time ==========
                             if (retries > 0) {
-                                console.log("Colors didn't match after 10sec (retrying): ", pixel[0], pixel[1], pixel[2], "!=", color[0], color[1], color[2])
+                                document.title = "failed " + lvlTitle + ": " + title
+                                errorContainer.innerHTML = "retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]"
                                 retries--
                                 maxDelay = 10000
                                 await runActions([prevClickAction])
                             } else {
-                                console.log("Colors didn't match after 10sec (skipping): ", pixel[0], pixel[1], pixel[2], "!=", color[0], color[1], color[2])
+                                document.title = "skipped " + lvlTitle + ": " + title
+                                errorContainer.innerHTML = "skipped waiting " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]"
                                 break
                             }
                         }
@@ -637,6 +660,8 @@
                     if (delay > 0) {
                         await sleep(delay)
                     }
+                } else if (action == actionDragDrop) {
+                    await runUnityDrag(target, x, y, altX, altY, 20, delay)
                 }
             }
         }
@@ -692,6 +717,71 @@
             fireTouch('touchend')
         }
 
+        async function runUnityDrag(canvas, x, y, altX, altY, steps = 20, duration = 300) {
+            const startX = gameArea.left + x * gameArea.width
+            const startY = gameArea.top + y * gameArea.height
+            const endX = gameArea.left + altX * gameArea.width
+            const endY = gameArea.top + altY * gameArea.height
+            const touchId = Date.now()
+
+            function fireMouse(type, cx, cy, buttons = 0, button = 0) {
+                canvas.dispatchEvent(new MouseEvent(type, {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    clientX: cx,
+                    clientY: cy,
+                    button: button,
+                    buttons
+                }))
+            }
+
+            function fireTouch(type, cx, cy) {
+                const touch = {
+                    identifier: touchId,
+                    target: canvas,
+                    clientX: cx,
+                    clientY: cy,
+                    pageX: cx,
+                    pageY: cy,
+                    screenX: cx,
+                    screenY: cy
+                }
+
+                const e = new Event(type, {
+                    bubbles: true,
+                    cancelable: true
+                })
+
+                if (type !== 'touchend') {
+                    e.touches = [touch]
+                    e.targetTouches = [touch]
+                } else {
+                    e.touches = []
+                    e.targetTouches = []
+                }
+                e.changedTouches = [touch]
+                canvas.dispatchEvent(e)
+            }
+
+            fireMouse('mousedown', startX, startY, 1)
+            fireTouch('touchstart', startX, startY)
+            canvas.setPointerCapture(touchId)
+
+            await sleep(16)
+            for (let i = 1; i <= steps; i++) {
+                const t = i / steps
+                const cx = startX + (endX - startX) * t
+                const cy = startY + (endY - startY) * t
+                fireMouse('mousemove', cx, cy, 1, -1)
+                fireTouch('touchmove', cx, cy)
+                await sleep(duration / steps)
+            }
+
+            fireMouse('mouseup', endX, endY, 0)
+            fireTouch('touchend', endX, endY)
+        }
+
         window.clicks = new Array()
 
         async function logMouse(e) {
@@ -722,18 +812,37 @@
             localStorage.setItem(key, value)
         }
 
+        function storeFloat(key, value) {
+            localStorage.setItem(key, value)
+        }
+
         function restoreInt(key, defaultValue = 0) {
+            return Number(localStorage.getItem(key) || defaultValue)
+        }
+
+        function restoreFloat(key, defaultValue = 0.0) {
             return Number(localStorage.getItem(key) || defaultValue)
         }
 
         let fromHomePage = false
         // Dungeon MACRO
         async function runDungeonMacro() {
+            // load settings
+            const floors = 10000
+            delayFactor = parseFloat(document.getElementById('delayFactor').value) || 1.0
+            const hpLimit = parseInt(document.getElementById('stopHPLimit').value, 10) || 0
+            storeFloat("delayFactor", delayFactor)
+            storeInt("maxFloors", floors)
+            storeInt("stopHPLimit", hpLimit)
+
+            // init coordinate system
             gameArea = gameCanvas.getBoundingClientRect()
             canvasScaleX = gameCanvas.width / gameArea.width
             canvasScaleY = gameCanvas.height / gameArea.height
+
+            // utils
             function delay(msec) {
-                return{x: 2, y: 2, delay: msec, actionType: actionDelay}
+                return{x: 2, y: 2, delay: Math.round(msec * delayFactor), actionType: actionDelay}
             }
             function title(title) {
                 return {actionType: actionTitle, title: title}
@@ -754,10 +863,6 @@
                 enableWakeLock()
             }
 
-            const floors = parseInt(document.getElementById('maxFloors').value, 10) || 1000
-            const hpLimit = parseInt(document.getElementById('stopHPLimit').value, 10) || 0
-            storeInt("maxFloors", floors)
-            storeInt("stopHPLimit", hpLimit)
             const titansHpPoints = [[0.316481, 0.368048], [0.39636, 0.446916], [0.4752275, 0.527806], [0.555106, 0.608696], [0.634985, 0.688574]]
 
             let titansHP = [0,0,0,0,0]
@@ -794,7 +899,7 @@
             // ======= dungeon confirm auto-battle results screen =======
             const waitForConfirmBattle = {x: 0.60083, y: 0.127563, color: [137,1,0], delay:100, actionType: actionWaitForColor, title: "waiting for battle result popup"}
 
-            let checkHP = title("check titans HP")
+            let checkHP = delay(1)
 
             if (titansHP[0] > 0) {
                 checkHP = {x: 0, xx: titansHP, y: 0.461, color: [56,199,28], actionType: actionInterruptIfNotColor, title: "Check titans HP"}
@@ -814,20 +919,29 @@
             const waitForFloorConfirm = {x: 0.5, y: 0.5, color: [22,12,8], delay: 100, actionType: actionWaitForColor, title: "waiting for floor confirmation popup"}
             const floorConfirm = {x: 0.635, y: 0.697, delay: 4000, actionType: actionClick, title: "clicking on floor confirmation popup"}
 
-            const jumpToRightGate = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: 100, actionType: actionJump, title: "clicking on right gate"}
-            const jumpToMidGate = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionJump, title: "clicking on mid gate"}
-            const jumpToLeftGate = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionJump, title: "clicking on left gate"}
-            const jumpToFloor1 = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: 100, actionType: actionJump, title: "clicking on floor1 final symbol"}
-            const jumpToFloor2 = {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28], delay: 100, actionType: actionJump, title: "clicking on floor2 final symbol"}
-            //floor2 done -> finish
+            const jumpToRightGate = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: 100, actionType: actionJumpIf, title: gateRight.title}
+            const jumpToMidGate = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionJumpIf, title: gateMid.title}
+            const jumpToLeftGate = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionJumpIf, title: gateLeft.title}
+            const jumpToFloor1 = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: 100, actionType: actionJumpIf, title: floor1Done.title}
+            const jumpToFloor2 = {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28], delay: 100, actionType: actionJumpIf, title: floor2Done.title}
+
+            // ========== initial game screen =============
+            const waitForGame = {"delay": 10000, "action": actionDelay, title: "waiting until game is loaded"}
+            const waitForHome = {"x": 0.488909426987061, "y":0.9969635627530364, "color":[56,37,2], "delay": 100, "action": actionWaitForColor, title: "checking if we are still on home screen"}
+
+            // ======== initial popups handling ============
+            const checkPopup = {"x":0.971644,"y":0.054499,"color":[245,209,117], actionType: actionJumpIfNot, title: waitForHome.title, delay: 1000}
+            const closePopup = {"x":0.971644,"y":0.054499,"color":[245,209,117], actionType: actionClick, title: "closing popup", delay: 1000}
 
             if (fromHomePage) {
                 fromHomePage = false
                 await runActions([
-                    {"delay": 10000, "action": actionDelay, title: "waiting until game is loaded"},
-                    {"x": 0.488909426987061, "y":0.9969635627530364, "color":[56,37,2], "delay": 100, "action": actionWaitForColor, title: "checking if we are still on home screen"},
+                    waitForGame,
+                    checkPopup,
+                    closePopup,
+                    waitForHome,
                     {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 1000, "title": "click on guild"},
-                    {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: 4000, "title": "click on dungeon"},
+                    {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: 5000, "title": "click on dungeon"},
                 ])
             }
 
@@ -861,7 +975,7 @@
                     title("lvl2"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
                     title("lvl3"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
                     title("lvl4"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl5"), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+                    title("lvl5"), delay(1000), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
                     title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm,
                     title("lvl6"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
                     title("lvl7"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
@@ -874,6 +988,44 @@
             isRunningMacro = false
             releaseWakeLock()
             setDungeonButtonState(false)
+        }
+
+        async function runFrontier() {
+            if (isRunningMacro) {
+                releaseWakeLock()
+                isRunningMacro = false
+                return
+            }
+            enableWakeLock()
+            gameArea = gameCanvas.getBoundingClientRect()
+            canvasScaleX = gameCanvas.width / gameArea.width
+            canvasScaleY = gameCanvas.height / gameArea.height
+
+            function delay(msec) {
+                return {x: 2, y: 2, delay: msec, actionType: actionDelay}
+            }
+
+            const openFrontier = {x: 0.46412, y: 0.239544, delay: 500, action: actionClick, title: "click frontier"}
+            const clickToBattle = {x: 0.9096045197740112, y: 0.8886597938144329, delay: 200, action: actionClick, title: "click to battle"}
+            const clickAutoBattle = {x: 0.8935969868173258, y: 0.7608247422680412, delay: 200, action: actionClick, title: "click auto"}
+            const clickContinue = {x: 0.9030131826741996, y: 0.8907216494845361, delay: 200, action: actionClick, title: "click continue"}
+            const clickManageTeams = {x: 0.782407, y: 0.719899, delay: 300, action: actionClick, title: "click manage teams"}
+            const scrollDown4 = {x: 0.5, y: 0.833967, altX: 0.5, alyY: 0.178707, delay: 3000, action: actionDragDrop, title: "scroll +4 teams"}
+            const move1to4 = {x: 0.135417, y: 0.833967, altX: 0.135417, alyY: 0.178707, delay: 3000, action: actionDragDrop, title: "swap 1 with 4"}
+
+            isRunningMacro = true
+            await runActions([scrollDown4, move1to4, scrollDown4, move1to4])
+            //await runActions([openFrontier, delay(2000), clickToBattle, delay(2000), clickManageTeams, delay(2000), scrollDown4, scrollDown4, move1to4, scrollDown4, move1to4])
+
+            /*for(let i=0; i<10000; i++) {
+                if (!isRunningMacro) return
+                //await runActions([clickBuyTitanPotion])
+                //await runActions([clickBuyHorns])
+                await runActions([clickToBattle, clickAutoBattle, clickContinue, delay(1000)])
+            }*/
+            releaseWakeLock()
+            isRunningMacro = false
+
         }
 
         async function runCustomMacro() {
@@ -914,7 +1066,7 @@
             DEBUG_CLICKS = !DEBUG_CLICKS
             const button = document.getElementById('customMacroButton')
             if (DEBUG_CLICKS) {
-                button.textContent = '🚫 Stop debug'
+                button.textContent = '🚫'
                 button.style.background = 'linear-gradient(180deg, #ff8a7a 0%, #b3261e 55%, #5e0d0d 100%)'
                 button.style.border = '1px solid #ffb0a8'
                 button.style.boxShadow = '0 0 12px rgba(255,70,70,0.45), inset 0 1px 0 rgba(255,255,255,0.18)'
@@ -922,7 +1074,7 @@
                 button.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)'
                 gameCanvas.addEventListener('click', logMouse)
             } else {
-                button.textContent = '👀 Debug clicks'
+                button.textContent = '👀'
                 button.style.background = 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)'
                 button.style.border = '1px solid #ffcf66'
                 button.style.boxShadow = '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)'
