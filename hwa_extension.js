@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-07-21
+// @version      2026-07-13
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -47,6 +47,8 @@
         const msg = String(e.reason);
         if (msg.includes('OOM') || msg.includes('memory access out of bounds') || msg.includes('Internal Server Error')) {
             location.reload();
+        } else {
+            document.getElementById('errorContainer').innerHTML = msg
         }
     });
 
@@ -55,6 +57,8 @@
         const msg = args.join(' ');
         if (msg.includes('OOM') || msg.includes('memory access out of bounds') || msg.includes('Internal Server Error')) {
             location.reload();
+        } else {
+            document.getElementById('errorContainer').innerHTML = msg
         }
         return originalError.apply(console, args);
     };
@@ -327,6 +331,7 @@
             }
             //customButton.addEventListener('click', runCustomMacro)
             customButton.addEventListener('click', toggleDebug)
+            //customButton.addEventListener('click', spendOutlandCoins)
             //customButton.addEventListener('click', runFrontier)
 
 
@@ -1055,8 +1060,45 @@
             for(let i=0; i<10000; i++) {
                 if (!isRunningMacro) return
                 //await runActions([clickBuyTitanPotion])
-                await runActions([clickBuyHorns])
-                //await runActions([clickToBattle, clickAutoBattle, clickContinue, delay(1000)])
+                //await runActions([clickBuyHorns])
+                await runActions([clickToBattle, clickAutoBattle, clickContinue, delay(1000)])
+            }
+            releaseWakeLock()
+            isRunningMacro = false
+        }
+
+        async function spendOutlandCoins() {
+            if (isRunningMacro) {
+                releaseWakeLock()
+                isRunningMacro = false
+                return
+            }
+            enableWakeLock()
+            gameArea = gameCanvas.getBoundingClientRect()
+            canvasScaleX = gameCanvas.width / gameArea.width
+            canvasScaleY = gameCanvas.height / gameArea.height
+
+            function delay(msec) {
+                return {x: 2, y: 2, delay: msec, actionType: actionDelay}
+            }
+
+            const buyItem1 = {x: 0.4242, y: 0.3675, delay: 50, action: actionClick}
+            const buyItem2 = {x: 0.6186, y: 0.3675, delay: 50, action: actionClick}
+            const buyItem3 = {x: 0.8154, y: 0.3675, delay: 50, action: actionClick}
+            const buyItem4 = {x: 0.4242, y: 0.6058, delay: 50, action: actionClick}
+            const buyItem6 = {x: 0.8154, y: 0.6058, delay: 50, action: actionClick}
+            const buyItem7 = {x: 0.4265, y: 0.8314, delay: 50, action: actionClick}
+            const buyItem8 = {x: 0.6175, y: 0.8314, delay: 50, action: actionClick}
+
+            const reload100gems = {x: 0.64, y: 0.88, delay: 2000, action: actionClick}
+            isRunningMacro = true
+            //runActions([openFrontier, delay(1000)])
+
+            for(let i=0; i<10000; i++) {
+                if (!isRunningMacro) return
+                //await runActions([clickBuyTitanPotion])
+                //await runActions([clickBuyHorns])
+                await runActions([buyItem1, buyItem2, buyItem3, buyItem4, buyItem6, buyItem7, buyItem8, reload100gems])
             }
             releaseWakeLock()
             isRunningMacro = false
