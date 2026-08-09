@@ -567,14 +567,17 @@
                             gameArea.height * y * canvasScaleY,
                         )
                         if (colorsAreSame(testPixel, color)) {
-                            isRunningMacro = false
-                            setDungeonButtonState(false)
-                            releaseWakeLock()
+                            await delay(5000)
+                            if (colorsAreSame(testPixel, color)) {
+                                isRunningMacro = false
+                                setDungeonButtonState(false)
+                                releaseWakeLock()
 
-                            const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo low to continue"
-                            document.title = error
-                            document.getElementById('errorContainer').innerHTML = error
-                            return
+                                const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo low to continue"
+                                document.title = error
+                                document.getElementById('errorContainer').innerHTML = error
+                                return
+                            }
                         }
                     }
                 } else if (actionType == actionInterruptIfNotColor) {
@@ -585,14 +588,17 @@
                             gameArea.height * y * canvasScaleY,
                         )
                         if (!colorsAreSame(testPixel, color)) {
-                            isRunningMacro = false
-                            setDungeonButtonState(false)
-                            releaseWakeLock()
+                            await delay(5000)
+                            if (!colorsAreSame(testPixel, color)) {
+                                isRunningMacro = false
+                                setDungeonButtonState(false)
+                                releaseWakeLock()
 
-                            const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo (" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + ") at x:" + xx[i] + " y:" + y
-                            document.title = error
-                            document.getElementById('errorContainer').innerHTML = error
-                            return
+                                const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo (" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + ") at x:" + xx[i] + " y:" + y
+                                document.title = error
+                                document.getElementById('errorContainer').innerHTML = error
+                                return
+                            }
                         }
                     }
                 } else if (actionType == actionJumpIf) {
