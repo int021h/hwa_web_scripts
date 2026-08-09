@@ -15,10 +15,29 @@
     /// ======== OPTIONS ==========
 
     const GAME_LOAD_TIMEOUT = 20000; // script starts in 20 seconds after the page is loaded
-    const MAX_WAIT_BEFORE_RETRY = 5000
-    const MAX_RETRIES = 3
+    
+    const DELAY_CHECK_CYCLE = 100 // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
+    const MAX_WAIT_BEFORE_RETRY = 5000 // max waiting time for a new screen to appear
+    const MAX_RETRIES = 3 // after 3 retries if screen didn't appear => page will be reloaded and script restarts
     const RELOAD_PAGE_ON_FAILURE = true //
+    
+    //initial dungeon delays
+    const MAX_FLOORS = 10000
+    const GAME_LOADED_DELAY = 10000
+    const DELAY_AFTER_CLICKING_GUILD = 5000
+    const DELAY_AFTER_CLICKING_DUNGEON = 5000
+    const EXTRA_GATE_DELAY_FIRST_FLOOR = 1000
+    const EXTRA_WALK_DELAY_FIRST_FLOOR = 3000
+    const EXTRA_FLOOR_DELAY_FIRST_FLOOR = 5000
 
+    // dungeon delays
+    const DELAY_FOR_TITANS_WALK = 1000 // after battle results confirmed titans walk to another lvl
+    const DELAY_AFTER_CLICKING_AUTOBATTLE = 500 // minimum duration of the battle
+    const DELAY_AFTER_GATE_CLICKED = 500 // delay after clicking on lvl gate, before rooms selection popup appeared
+    const DELAY_AFTER_ROOM_CLICKED = 500 // delay between choosing the room and opening the battlefield
+    const DELAY_AFTER_CLICKING_FLOOR_REWARD = 1000 // click on shield at the end of the floor on lvl5 or lvl10
+    const DELAY_AFTER_FINISHING_FLOOR = 4000 // click on accept gold for the floor, titans slowly walk to the next floor
+    
     let DEBUG_CLICKS = false
 
     const DEFAULT_ORDER = [
@@ -882,7 +901,7 @@
         // Dungeon MACRO
         async function runDungeonMacro() {
             // load settings
-            const floors = 10000
+            const floors = MAX_FLOORS
             delayFactor = parseFloat(document.getElementById('delayFactor').value) || 1.0
             const hpLimit = parseInt(document.getElementById('stopHPLimit').value, 10) || 0
             storeFloat("delayFactor", delayFactor)
@@ -927,31 +946,31 @@
             }
 
             // ======= dungeon gates =======
-            const waitForGateRight = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: 100, actionType: actionWaitForColor, title: "waiting for right gate scene"}
-            const gateRight = {x: 0.691268, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on right gate"}
+            const waitForGateRight = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for right gate scene"}
+            const gateRight = {x: 0.691268, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "clicking on right gate"}
 
-            const waitForGateMid = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay:100, actionType: actionWaitForColor, title: "waiting for mid gate scene"}
-            const gateMid = {x: 0.500, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on mid gate"}
+            const waitForGateMid = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for mid gate scene"}
+            const gateMid = {x: 0.500, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "clicking on mid gate"}
 
-            const waitForGateLeft = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionWaitForColor, title: "waiting for left gate scene"}
-            const gateLeft = {x: 0.312, y: 0.5, delay: 500, actionType: actionClick, title: "clicking on left gate"}
+            const waitForGateLeft = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for left gate scene"}
+            const gateLeft = {x: 0.312, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "clicking on left gate"}
 
             // ======= dungeon elemental rooms =======
-            const waitFor1RoomSelection = {x: 0.69969666, y: 0.8506637, color: [17,12,6], delay: 100, actionType: actionWaitForColor, title: "waiting for single room selection popup"}
-            const waitFor2RoomSelection = {x: 0.5, y: 0.5, color: [19,17,7], delay: 100, actionType: actionWaitForColor, title: "waiting for double room selection popup"}
-            const roomMid = {x: 0.5, y: 0.795, delay: 500, actionType: actionClick, title: "clicking on mid room"}
+            const waitFor1RoomSelection = {x: 0.69969666, y: 0.8506637, color: [17,12,6], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for single room selection popup"}
+            const waitFor2RoomSelection = {x: 0.5, y: 0.5, color: [19,17,7], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for double room selection popup"}
+            const roomMid = {x: 0.5, y: 0.795, delay: DELAY_AFTER_ROOM_CLICKED, actionType: actionClick, title: "clicking on mid room"}
 
             //  ======= usage: checkRoomColors, roomLeft, roomRight =======
-            const checkRoomColors = {x: 0.31496881496881496, y: 0.6560364464692483, altX: 0.6891891891891891, delay: 100, actionType: actionChooseRoom, title: "choosing a correct room"}
-            const roomLeft = {x: 0.3076, y: 0.8, delay: 500, actionType: actionClick, title: "clicking on left room"}
-            const roomRight = {x: 0.6833, y: 0.8, delay: 500, actionType: actionClick, title: "clicking on right room"}
+            const checkRoomColors = {x: 0.31496881496881496, y: 0.6560364464692483, altX: 0.6891891891891891, delay: DELAY_CHECK_CYCLE, actionType: actionChooseRoom, title: "choosing a correct room"}
+            const roomLeft = {x: 0.3076, y: 0.8, delay: DELAY_AFTER_ROOM_CLICKED, actionType: actionClick, title: "clicking on left room"}
+            const roomRight = {x: 0.6833, y: 0.8, delay: DELAY_AFTER_ROOM_CLICKED, actionType: actionClick, title: "clicking on right room"}
             // ======= dungeon battlefield screen =======
 
-            const waitForBattlefield = {x: 0.014553, y: 0.952164, color: [34,46,64], delay: 100, actionType: actionWaitForColor, title: "waiting for battlefield scene"}
-            const autoBattle = {x: 0.87214, y: 0.758542, delay: 500, actionType: actionClick, title: "clicking autobattle"}
+            const waitForBattlefield = {x: 0.014553, y: 0.952164, color: [34,46,64], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for battlefield scene"}
+            const autoBattle = {x: 0.87214, y: 0.758542, delay: DELAY_AFTER_CLICKING_AUTOBATTLE, actionType: actionClick, title: "clicking autobattle"}
 
             // ======= dungeon confirm auto-battle results screen =======
-            const waitForConfirmBattle = {x: 0.60083, y: 0.127563, color: [137,1,0], delay:100, actionType: actionWaitForColor, title: "waiting for battle result popup"}
+            const waitForConfirmBattle = {x: 0.60083, y: 0.127563, color: [137,1,0], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for battle result popup"}
 
             let checkHP = delay(1)
 
@@ -959,29 +978,29 @@
                 checkHP = {x: 0, xx: titansHP, y: 0.461, color: [56,199,28], actionType: actionInterruptIfNotColor, title: "Check titans HP"}
             }
 
-            const confirmBattle = {x: 0.641372, y: 0.822323, delay: 1000, actionType: actionClick, title: "clicking on confirm battle result"}
+            const confirmBattle = {x: 0.641372, y: 0.822323, delay: DELAY_FOR_TITANS_WALK, actionType: actionClick, title: "clicking on confirm battle result"}
 
             // ======= dungeon floor finished symbol =======
-            const waitForFloor1Done = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: 100, actionType: actionWaitForColor, title: "waiting for floor1 final scene"}
-            const floor1Done = {x: 0.7297, y: 0.47836, delay: 1000, actionType: actionClick, title: "clicking on floor1 final symbol"}
+            const waitForFloor1Done = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for floor1 final scene"}
+            const floor1Done = {x: 0.7297, y: 0.47836, delay: DELAY_AFTER_CLICKING_FLOOR_REWARD, actionType: actionClick, title: "clicking on floor1 final symbol"}
 
-            const waitForFloor2Done = {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28], delay: 100, actionType: actionWaitForColor, title: "waiting for floor2 final scene"}
-            const floor2Done = {x: 0.27755, y: 0.47836, delay: 1000, actionType: actionClick, title: "clicking on floor2 final symbol"}
+            const waitForFloor2Done = {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for floor2 final scene"}
+            const floor2Done = {x: 0.27755, y: 0.47836, delay: DELAY_AFTER_CLICKING_FLOOR_REWARD, actionType: actionClick, title: "clicking on floor2 final symbol"}
 
 
             // ======= dungeon floor finished popup ========
-            const waitForFloorConfirm = {x: 0.5, y: 0.5, color: [22,12,8], delay: 100, actionType: actionWaitForColor, title: "waiting for floor confirmation popup"}
-            const floorConfirm = {x: 0.635, y: 0.697, delay: 4000, actionType: actionClick, title: "clicking on floor confirmation popup"}
+            const waitForFloorConfirm = {x: 0.5, y: 0.5, color: [22,12,8], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for floor confirmation popup"}
+            const floorConfirm = {x: 0.635, y: 0.697, delay: DELAY_AFTER_FINISHING_FLOOR, actionType: actionClick, title: "clicking on floor confirmation popup"}
 
-            const jumpToRightGate = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: 100, actionType: actionJumpIf, title: gateRight.title}
-            const jumpToMidGate = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionJumpIf, title: gateMid.title}
-            const jumpToLeftGate = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: 100, actionType: actionJumpIf, title: gateLeft.title}
-            const jumpToFloor1 = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: 100, actionType: actionJumpIf, title: floor1Done.title}
-            const jumpToFloor2 = {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28], delay: 100, actionType: actionJumpIf, title: floor2Done.title}
+            const jumpToRightGate = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateRight.title}
+            const jumpToMidGate = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateMid.title}
+            const jumpToLeftGate = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateLeft.title}
+            const jumpToFloor1 = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: floor1Done.title}
+            const jumpToFloor2 = {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: floor2Done.title}
 
             // ========== initial game screen =============
-            const waitForGame = {"delay": 10000, "action": actionDelay, title: "waiting until game is loaded"}
-            const waitForHome = {"x": 0.488909426987061, "y":0.9969635627530364, "color":[56,37,2], "delay": 100, "action": actionWaitForColor, title: "checking if we are still on home screen"}
+            const waitForGame = {"delay": GAME_LOADED_DELAY, "action": actionDelay, title: "waiting until game is loaded"}
+            const waitForHome = {"x": 0.488909426987061, "y":0.9969635627530364, "color":[56,37,2], "delay": DELAY_CHECK_CYCLE, "action": actionWaitForColor, title: "checking if we are still on home screen"}
 
             // ======== initial popups handling ============
             const checkPopup = {"x":0.971644,"y":0.054499,"color":[245,209,117], actionType: actionJumpIfNot, title: waitForHome.title, delay: 1000}
@@ -994,33 +1013,33 @@
                     checkPopup,
                     closePopup,
                     waitForHome,
-                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 5000, "title": "click on guild"}, //@mmoebius: increase delay between uild window and click on dungeon (load needs often more than 1.5 seconds)
-                    {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: 5000, "title": "click on dungeon"},
+                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: DELAY_AFTER_CLICKING_GUILD, "title": "click on guild"}, //@mmoebius: increase delay between uild window and click on dungeon (load needs often more than 1.5 seconds)
+                    {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: DELAY_AFTER_CLICKING_DUNGEON, "title": "click on dungeon"},
                 ])
             }
 
             await runActions([
                 jumpToRightGate, jumpToMidGate, jumpToLeftGate, jumpToFloor1, jumpToFloor2,
-                gateRight, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
+                gateRight, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToFloor2,
-                gateMid, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate, jumpToLeftGate,
-                gateMid, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate, jumpToLeftGate,
-                gateMid, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToLeftGate, jumpToRightGate,
-                gateLeft, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
+                gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToFloor1, jumpToMidGate,
-                floor1Done, waitForFloorConfirm, floorConfirm, delay(5000),
-                gateLeft, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
-                gateMid, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
+                floor1Done, waitForFloorConfirm, floorConfirm, delay(EXTRA_FLOOR_DELAY_FIRST_FLOOR),
+                gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate,
-                gateMid, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate,
-                gateMid, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
-                gateRight, delay(1000), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(3000),
-                floor2Done, waitForFloorConfirm, floorConfirm, delay(5000),
-            ], 1)
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateRight, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                floor2Done, waitForFloorConfirm, floorConfirm, delay(EXTRA_FLOOR_DELAY_FIRST_FLOOR),
+            ])
 
             for (let i = 0; i < floors; i++) {
                 if (!isRunningMacro) return
