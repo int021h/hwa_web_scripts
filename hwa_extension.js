@@ -46,6 +46,29 @@
 
     // ========= CRASH HANDLERS =========
 
+    // ----------------------- mmoebius
+    // ugly workaround to check if errors occured
+    // hwa displays an exception popup (class = 'error-card') in client if an error occures
+    // we use that to continously check if an exception is fired since console.error not always includes something to handle
+    async function checkError() {
+        function resolveAfterDelay() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const errors = document.getElementsByClassName('error-card');
+                    if(errors.length > 0) {
+                        location.reload();
+                    }
+                    resolve("");
+                }, 1000);
+            });
+        }
+        while (true) {
+            const result = await resolveAfterDelay();
+        };
+    }
+    checkError();
+    // -----------------------
+    
     window.addEventListener('unhandledrejection', (e) => {
         const msg = String(e.reason);
         if (msg.includes('OOM') || msg.includes('memory access out of bounds') || msg.includes('Internal Server Error')) {
@@ -971,7 +994,7 @@
                     checkPopup,
                     closePopup,
                     waitForHome,
-                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 1500, "title": "click on guild"},
+                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 5000, "title": "click on guild"}, //@mmoebius: increase delay between uild window and click on dungeon (load needs often more than 1.5 seconds)
                     {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: 5000, "title": "click on dungeon"},
                 ])
             }
