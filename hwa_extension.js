@@ -46,6 +46,29 @@
 
     // ========= CRASH HANDLERS =========
 
+    // ----------------------- mmoebius
+    // ugly workaround to check if errors occured
+    // hwa displays an exception popup (class = 'error-card') in client if an error occures
+    // we use that to continously check if an exception is fired since console.error not always includes something to handle
+    async function checkError() {
+        function resolveAfterDelay() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const errors = document.getElementsByClassName('error-card');
+                    if(errors.length > 0) {
+                        location.reload();
+                    }
+                    resolve("");
+                }, 1000);
+            });
+        }
+        while (true) {
+            const result = await resolveAfterDelay();
+        };
+    }
+    checkError();
+    // -----------------------
+    
     window.addEventListener('unhandledrejection', (e) => {
         const msg = String(e.reason);
         if (msg.includes('OOM') || msg.includes('memory access out of bounds') || msg.includes('Internal Server Error')) {
