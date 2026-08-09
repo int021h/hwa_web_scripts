@@ -994,7 +994,7 @@
                     checkPopup,
                     closePopup,
                     waitForHome,
-                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 1500, "title": "click on guild"},
+                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 5000, "title": "click on guild"}, //@mmoebius: increase delay between uild window and click on dungeon (load needs often more than 1.5 seconds)
                     {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: 5000, "title": "click on dungeon"},
                 ])
             }
