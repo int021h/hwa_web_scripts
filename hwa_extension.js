@@ -590,7 +590,7 @@
                             gameArea.height * y * canvasScaleY,
                         )
                         if (colorsAreSame(testPixel, color)) {
-                            await delay(5000)
+                            await sleep(5000)
                             if (colorsAreSame(testPixel, color)) {
                                 isRunningMacro = false
                                 setDungeonButtonState(false)
@@ -611,7 +611,7 @@
                             gameArea.height * y * canvasScaleY,
                         )
                         if (!colorsAreSame(testPixel, color)) {
-                            await delay(5000)
+                            await sleep(5000)
                             if (!colorsAreSame(testPixel, color)) {
                                 isRunningMacro = false
                                 setDungeonButtonState(false)
