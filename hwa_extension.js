@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-07
+// @version      2026-07-13
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -14,7 +14,10 @@
 
     /// ======== OPTIONS ==========
 
-    const GAME_LOAD_TIMEOUT = 20000; // script starts in 20 seconds after page is loaded
+    const GAME_LOAD_TIMEOUT = 20000; // script starts in 20 seconds after the page is loaded
+    const MAX_WAIT_BEFORE_RETRY = 5000
+    const MAX_RETRIES = 3
+    const RELOAD_PAGE_ON_FAILURE = true //
 
     let DEBUG_CLICKS = false
 
@@ -501,14 +504,14 @@
 
             header.children[0].id = 'errorContainer'
             header.children[0].style.color = 'red'
-            header.children[0].style.fontSize = '8px'
+            header.children[0].style.fontSize = '12px'
             header.children[0].style.maxWidth = '150px'
 
             setDungeonButtonState(false)
         }
 
         /// MACRO RUNNER
-        async function runActions(actions, maxRetries = 2) {
+        async function runActions(actions, maxRetries = MAX_RETRIES) {
             const target = gameCanvas
 
             let skipUntilAction = null
@@ -565,7 +568,12 @@
                         )
                         if (colorsAreSame(testPixel, color)) {
                             isRunningMacro = false
-                            console.log(lvlTitle, ":", i+1, "titan's HP is tooo low to continue")
+                            setDungeonButtonState(false)
+                            releaseWakeLock()
+
+                            const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo low to continue"
+                            document.title = error
+                            document.getElementById('errorContainer').innerHTML = error
                             return
                         }
                     }
@@ -578,7 +586,12 @@
                         )
                         if (!colorsAreSame(testPixel, color)) {
                             isRunningMacro = false
-                            console.log(lvlTitle, ":", i+1, "titan's HP is tooo low to continue")
+                            setDungeonButtonState(false)
+                            releaseWakeLock()
+
+                            const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo (" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + ") at x:" + xx[i] + " y:" + y
+                            document.title = error
+                            document.getElementById('errorContainer').innerHTML = error
                             return
                         }
                     }
@@ -589,6 +602,7 @@
                     )
                     if (colorsAreSame(testPixel, color, 10)) {
                         skipUntilAction = title
+                        document.title = "Screen detected: " + title
                         console.log("Room detected. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
                     } else {
                         sleep(100)
@@ -600,13 +614,14 @@
                     )
                     if (!colorsAreSame(testPixel, color, 10)) {
                         skipUntilAction = title
+                        document.title = "Screen detected: " + title
                         console.log("Conditional jump. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "==", color[0], color[1], color[2])
                     } else {
                         sleep(100)
                     }
                 } else if (actionType == actionWaitForColor) {
                     let retries = maxRetries
-                    let maxDelay = 5000
+                    let maxDelay = 5 * delay
                     let pixel = []
                     do {
                         await sleep(delay)
@@ -622,16 +637,19 @@
                                 document.title = "failed " + lvlTitle + ": " + title
                                 errorContainer.innerHTML = "retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]"
                                 retries--
-                                maxDelay = 10000
+                                maxDelay = MAX_WAIT_BEFORE_RETRY
                                 await runActions([prevClickAction])
                             } else {
                                 document.title = "skipped " + lvlTitle + ": " + title
                                 errorContainer.innerHTML = "skipped waiting " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]"
+                                if (RELOAD_PAGE_ON_FAILURE) {
+                                    location.reload()
+                                }
                                 break
                             }
                         }
                     } while (!colorsAreSame(pixel, color) && isRunningMacro)
-                        await sleep(delay)
+                    await sleep(delay)
                 } else if (actionType == actionChooseRoom) {
                     let leftPixel = await readPixelOnDraw(
                         gameArea.width * x * canvasScaleX,
@@ -807,9 +825,11 @@
                 y: y,
                 color: [r,g,b],
             }
-            document.title = JSON.stringify(clickObj)
+
+            document.getElementById('errorContainer').innerHTML = JSON.stringify(clickObj)
+            document.getElementById('errorContainer').style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${a / 255})`
+            document.getElementById('errorContainer').style.color = "white"
             //console.log(JSON.stringify(clickObj))
-            //document.body.style.setProperty('--bg-color', `rgba(${r}, ${g}, ${b}, ${a / 255})`)
         }
 
 
@@ -945,7 +965,7 @@
                     checkPopup,
                     closePopup,
                     waitForHome,
-                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 1000, "title": "click on guild"},
+                    {"x": 0.332755, "y": 0.910013, "action": actionClick, delay: 1500, "title": "click on guild"},
                     {"x": 0.2412199630314233, "y": 0.4807692307692308, "action": actionClick, delay: 5000, "title": "click on dungeon"},
                 ])
             }
