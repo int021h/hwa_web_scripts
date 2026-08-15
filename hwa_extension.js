@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-09-15
+// @version      2026-08-09
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -49,11 +49,16 @@
     const BUTTON_TEXT_RUN_DEBUG = '👀'
     const BUTTON_TEXT_STOP_DEBUG = '🚫'
 
+    const BUTTON_TEXT_RUN_REPEAT_CLICK = 'Repeat next click'
+    const BUTTON_TEXT_ARMED_REPEAT_CLICK = 'Click on the game...'
+    const BUTTON_TEXT_STOP_REPEAT_CLICK = 'Stop repeating'
+
     const MACRO_DUNGEON = 'dungeon'
     const MACRO_DAILY = 'daily'
     const MACRO_FRONTIER = 'frontier'
     const MACRO_CUSTOM = 'custom'
     const MACRO_BUY_ITEMS = 'buy_items'
+    const MACRO_REPEAT_CLICK = 'repeat_click'
 
     const DEFAULT_ORDER = [
         { id: 'mixed', label: '⚡', color: '#FFC107', dColor: '#806104', bColor: '#806104' },
@@ -153,6 +158,9 @@
         const pixels = new Uint8Array(4)
         let pendingRead = null
         const originalRAF = window.requestAnimationFrame.bind(window)
+
+        let repeatNextClick = false
+        let repeatClickCoordinates = null
 
         async function releaseWakeLock() {
             if (wakeLock != null) {
@@ -667,7 +675,6 @@
                 label.appendChild(document.createTextNode(task))
                 dailyPopup.appendChild(label)
             })
-
             const dailyStartButton = document.createElement('button')
             dailyStartButton.textContent = 'Start'
             Object.assign(dailyStartButton.style, {
@@ -703,6 +710,101 @@
                 await runDailyTasks(params)
             })
             dailyPopup.appendChild(dailyStartButton)
+
+            // ---------- splitter ----------
+            const repeatClickSplitter = document.createElement('hr')
+            Object.assign(repeatClickSplitter.style, {
+                margin: '10px 0',
+                border: 'none',
+                borderTop: '1px solid rgba(120,180,255,0.35)'
+            })
+            dailyPopup.appendChild(repeatClickSplitter)
+
+            // ---------- repeat next click ----------
+            const repeatClickRow = document.createElement('div')
+            Object.assign(repeatClickRow.style, {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+            })
+
+            const repeatClickButton = document.createElement('button')
+            repeatClickButton.id = 'repeatClickButton'
+            repeatClickButton.textContent = BUTTON_TEXT_RUN_REPEAT_CLICK
+            Object.assign(repeatClickButton.style, {
+                flex: '1',
+                background: 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)',
+                color: '#fff6d6',
+                border: '1px solid #ffcf66',
+                borderRadius: '8px',
+                padding: '5px 8px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+                boxShadow: '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+                transition: '0.15s ease'
+            })
+            repeatClickButton.onmouseenter = () => {
+                repeatClickButton.style.filter = 'brightness(1.12)'
+            }
+            repeatClickButton.onmouseleave = () => {
+                repeatClickButton.style.filter = 'brightness(1)'
+            }
+
+            function makeRepeatClickInput(title, defaultValue, storageKey) {
+                const input = document.createElement('input')
+                input.type = 'text'
+                input.title = title
+                input.value = restoreInt(storageKey, defaultValue)
+                Object.assign(input.style, {
+                    width: '56px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(120,180,255,0.5)',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#eef7ff',
+                    padding: '4px 6px',
+                    textAlign: 'center'
+                })
+                return input
+            }
+
+            const repeatClickCountInput = makeRepeatClickInput('Number of repeats', 1000, 'repeatClickCount')
+            const repeatClickDelayInput = makeRepeatClickInput('Delay between clicks (ms)', 300, 'repeatClickDelay')
+
+            repeatClickRow.appendChild(repeatClickButton)
+            repeatClickRow.appendChild(repeatClickCountInput)
+            repeatClickRow.appendChild(repeatClickDelayInput)
+            dailyPopup.appendChild(repeatClickRow)
+
+            repeatClickButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+
+                if (isRunningMacro == MACRO_REPEAT_CLICK) {
+                    isRunningMacro = null
+                    releaseWakeLock()
+                    setActivated(repeatClickButton, false, BUTTON_TEXT_STOP_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
+                    setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
+                    return
+                }
+
+                if (repeatNextClick) {
+                    armRepeatClick(false)
+                    setActivated(repeatClickButton, false, BUTTON_TEXT_ARMED_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
+                    setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
+                    return
+                }
+
+                const repeats = parseInt(repeatClickCountInput.value, 10) || 1000
+                const delay = parseInt(repeatClickDelayInput.value, 10) || 300
+                storeInt('repeatClickCount', repeats)
+                storeInt('repeatClickDelay', delay)
+
+                setActivated(repeatClickButton, true, BUTTON_TEXT_ARMED_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
+                setActivated(dailyButton, true, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
+                dailyPopup.style.display = 'none'
+                armRepeatClick(true, repeats, delay)
+            })
+
             document.body.appendChild(dailyPopup)
 
             dailyButton.addEventListener('click', async (e) => {
@@ -711,6 +813,17 @@
                     await releaseWakeLock()
                     setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                     isRunningMacro = null
+                    return
+                }
+
+                if (repeatNextClick || isRunningMacro == MACRO_REPEAT_CLICK) {
+                    armRepeatClick(false)
+                    if (isRunningMacro == MACRO_REPEAT_CLICK) {
+                        isRunningMacro = null
+                        await releaseWakeLock()
+                    }
+                    setActivated(repeatClickButton, false, BUTTON_TEXT_STOP_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
+                    setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                     return
                 }
 
@@ -1045,6 +1158,15 @@
             const gameX = e.clientX - gameArea.x
             const gameY = e.clientY - gameArea.y
 
+            if (repeatNextClick) {
+                const { repeats, delay } = repeatClickCoordinates
+                const x = Number((gameX / gameArea.width).toFixed(6))
+                const y = Number((gameY / gameArea.height).toFixed(6))
+                armRepeatClick(false)
+                runRepeatClickMacro(x, y, repeats, delay)
+                return
+            }
+
             await sleep(1000)
 
             const pixel = await readPixelOnDraw(gameX * canvasScaleX, gameY * canvasScaleY, 100)
@@ -1066,6 +1188,43 @@
             //console.log(JSON.stringify(clickObj))
         }
 
+        function armRepeatClick(arm, repeats = 1000, delay = 300) {
+            repeatNextClick = arm
+            if (arm) {
+                repeatClickCoordinates = { repeats, delay }
+                if (!DEBUG_CLICKS) {
+                    gameCanvas.addEventListener('click', logMouse)
+                }
+            } else {
+                repeatClickCoordinates = null
+                if (!DEBUG_CLICKS) {
+                    gameCanvas.removeEventListener('click', logMouse)
+                }
+            }
+        }
+
+        async function runRepeatClickMacro(x, y, repeats, delay) {
+            if (isRunningMacro != null) {
+                return
+            }
+            isRunningMacro = MACRO_REPEAT_CLICK
+            setActivated(repeatClickButton, true, BUTTON_TEXT_STOP_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
+            await enableWakeLock()
+
+            const clickAction = { x: x, y: y, delay: delay, actionType: actionClick, title: "repeating click" }
+
+            for (let i = 0; i < repeats; i++) {
+                if (isRunningMacro != MACRO_REPEAT_CLICK) break
+                await runActions([clickAction], MACRO_REPEAT_CLICK)
+            }
+
+            if (isRunningMacro == MACRO_REPEAT_CLICK) {
+                isRunningMacro = null
+                await releaseWakeLock()
+            }
+            setActivated(repeatClickButton, false, BUTTON_TEXT_STOP_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
+            setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
+        }
 
         function storeInt(key, value) {
             localStorage.setItem(key, value)
