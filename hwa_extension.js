@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-16
+// @version      2026-08-16 14:37
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -29,6 +29,8 @@
     const EXTRA_WALK_DELAY_FIRST_FLOOR = 3000
     const EXTRA_FLOOR_DELAY_FIRST_FLOOR = 5000
 
+    const EXTRA_DELAY_BEFORE_CONFIRM_BATTLE = 0
+
     // dungeon delays
     const DELAY_FOR_TITANS_WALK = 1000 // after battle results confirmed titans walk to another lvl
     const DELAY_AFTER_CLICKING_AUTOBATTLE = 500 // minimum duration of the battle
@@ -49,7 +51,7 @@
     const BUTTON_TEXT_RUN_DEBUG = '👀'
     const BUTTON_TEXT_STOP_DEBUG = '🚫'
 
-    const BUTTON_TEXT_RUN_REPEAT_CLICK = 'Capture click'
+    const BUTTON_TEXT_RUN_REPEAT_CLICK = 'Start recording'
     const BUTTON_TEXT_ARMED_REPEAT_CLICK = 'Recording...'
     const BUTTON_TEXT_STOP_REPEAT_CLICK = 'Stop repeating'
     const BUTTON_TEXT_STOP_RECORDING = 'Stop recording'
@@ -109,12 +111,28 @@
     checkError();
     // -----------------------
 
+    // keeps the last 10 errors as separate spans inside #errorContainer instead of overwriting it
+    function addError(msg) {
+        const container = document.getElementById('errorContainer')
+        if (!container) return
+
+        const span = document.createElement('div')
+        span.textContent = msg
+        container.appendChild(span)
+
+        while (container.children.length > 10) {
+            container.removeChild(container.firstChild)
+        }
+
+        container.scrollTop = container.scrollHeight
+    }
+
     window.addEventListener('unhandledrejection', (e) => {
         const msg = String(e.reason);
         if (msg.includes('OOM') || msg.includes('memory access out of bounds') || msg.includes('Internal Server Error')) {
             location.reload();
         } else {
-            document.getElementById('errorContainer').innerHTML = msg
+            addError(msg)
         }
     });
 
@@ -124,7 +142,7 @@
         if (msg.includes('OOM') || msg.includes('memory access out of bounds') || msg.includes('Internal Server Error')) {
             location.reload();
         } else {
-            document.getElementById('errorContainer').innerHTML = msg
+            addError(msg)
         }
         return originalError.apply(console, args);
     };
@@ -636,8 +654,8 @@
             dailyPopup.appendChild(dailyTitle)
             const dailyTasks = [
                 'heroic_chest',
+                'tower',
                 'expeditions',
-                //'tower',
                 'hydra',
                 'camps',
                 'rewards',
@@ -724,7 +742,7 @@
 
             // ---------- repeat click ----------
             const repeatClickTitle = document.createElement('div')
-            repeatClickTitle.textContent = 'Repeat click'
+            repeatClickTitle.textContent = 'Repeat clicks'
             Object.assign(repeatClickTitle.style, {
                 fontWeight: 'bold',
                 marginBottom: '8px',
@@ -806,7 +824,7 @@
             dailyPopup.appendChild(repeatClickRow)
 
             const repeatClickHint = document.createElement('div')
-            repeatClickHint.innerHTML = 'Click "Capture click", then make the clicks in the game you want repeated.<br>Click "Stop recording" when done — the whole sequence replays N times,<br>with a D ms delay between repeats<br><i>ps: delays between the recorded clicks themselves are captured automatically</i>.'
+            repeatClickHint.innerHTML = 'Click "Start recording", then make the clicks in the game you want repeated.<br>Click "Stop recording" when done — the whole sequence replays N times,<br>with a D ms delay between repeats<br><i>ps: delays between the recorded clicks themselves are captured automatically</i>.'
             Object.assign(repeatClickHint.style, {
                 marginTop: '6px',
                 color: '#8fa8c4',
@@ -911,7 +929,7 @@
                     setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                 }
             })
-
+            
             document.body.appendChild(dailyPopup)
 
             dailyButton.addEventListener('click', async (e) => {
@@ -951,6 +969,97 @@
                 }
             })
 
+            // ---------- logs button + popup ----------
+            const logsButton = document.createElement('button')
+            logsButton.id = 'logsButton'
+            logsButton.textContent = '📋'
+            Object.assign(logsButton.style, {
+                background: 'linear-gradient(180deg, #ffe08a 0%, #d08b18 55%, #8f5310 100%)',
+                color: '#fff6d6',
+                border: '1px solid #ffcf66',
+                borderRadius: '8px',
+                padding: '4px 12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+                boxShadow: '0 0 10px rgba(255,180,50,0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+                transition: '0.15s ease'
+            })
+            logsButton.onmouseenter = () => {
+                logsButton.style.filter = 'brightness(1.12)'
+            }
+            logsButton.onmouseleave = () => {
+                logsButton.style.filter = 'brightness(1)'
+            }
+
+            const logsPopup = document.createElement('div')
+            logsPopup.id = 'logsPopup'
+            Object.assign(logsPopup.style, {
+                position: 'fixed',
+                display: 'none',
+                zIndex: '9999999',
+                minWidth: '300px',
+                maxWidth: '400px',
+                padding: '12px',
+                border: '1px solid rgba(120,180,255,0.5)',
+                borderRadius: '10px',
+                background: 'linear-gradient(180deg, rgba(20,30,55,0.98) 0%, rgba(8,12,25,0.98) 100%)',
+                boxShadow: '0 0 18px rgba(0,140,255,0.3)',
+                color: '#d9ecff',
+                fontSize: '14px',
+                fontFamily: 'Trebuchet MS, Verdana, sans-serif',
+                backdropFilter: 'blur(4px)'
+            })
+
+            const logsTitle = document.createElement('div')
+            logsTitle.textContent = 'Recent errors'
+            Object.assign(logsTitle.style, {
+                fontWeight: 'bold',
+                marginBottom: '8px',
+                color: '#eef7ff',
+                textAlign: 'center'
+            })
+            logsPopup.appendChild(logsTitle)
+
+            const errorContainerEl = document.createElement('div')
+            errorContainerEl.id = 'errorContainer'
+            Object.assign(errorContainerEl.style, {
+                color: 'red',
+                fontSize: '12px',
+                maxHeight: '250px',
+                overflowY: 'auto',
+                cursor: 'pointer'
+            })
+            errorContainerEl.title = 'Click to copy all errors to clipboard'
+            errorContainerEl.addEventListener('click', () => {
+                const text = Array.from(errorContainerEl.querySelectorAll('span')).map(s => s.textContent).join('\n')
+                navigator.clipboard.writeText(text)
+            })
+            logsPopup.appendChild(errorContainerEl)
+
+            document.body.appendChild(logsPopup)
+
+            logsButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+
+                const text = Array.from(errorContainerEl.querySelectorAll('span')).map(s => s.textContent).join('\n')
+                navigator.clipboard.writeText(text)
+
+                if (logsPopup.style.display === 'none') {
+                    const rect = logsButton.getBoundingClientRect()
+                    logsPopup.style.left = `${rect.right - 400}px`
+                    logsPopup.style.top = `${rect.bottom + 6}px`
+                    logsPopup.style.display = 'block'
+                } else {
+                    logsPopup.style.display = 'none'
+                }
+            })
+            document.addEventListener('click', (e) => {
+                if (!logsPopup.contains(e.target) && e.target !== logsButton) {
+                    logsPopup.style.display = 'none'
+                }
+            })
+
             container.appendChild(document.createTextNode('Priority:'))
             container.appendChild(elements)
             container.appendChild(document.createTextNode('Delays:'))
@@ -960,14 +1069,10 @@
             container.appendChild(button)
             container.appendChild(dailyButton)
             container.appendChild(customButton)
+            container.appendChild(logsButton)
 
             const header = document.getElementById('header')
             header.insertBefore(container, header.children[1])
-
-            header.children[0].id = 'errorContainer'
-            header.children[0].style.color = 'red'
-            header.children[0].style.fontSize = '12px'
-            header.children[0].style.maxWidth = '150px'
 
             setActivated(dungeonMacroButton, false, BUTTON_TEXT_STOP_DUNGEON, BUTTON_TEXT_RUN_DUNGEON)
         }
@@ -1035,7 +1140,7 @@
                             if (colorsAreSame(testPixel, color, threshold)) {
                                 const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo low to continue"
                                 document.title = error
-                                document.getElementById('errorContainer').innerHTML = error
+                                addError(error)
                                 return
                             }
                         }
@@ -1052,7 +1157,7 @@
                             if (!colorsAreSame(testPixel, color, threshold)) {
                                 const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo (" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + ") at x:" + xx[i] + " y:" + y
                                 document.title = error
-                                document.getElementById('errorContainer').innerHTML = error
+                                addError(error)
                                 return
                             }
                         }
@@ -1090,19 +1195,19 @@
                         if (maxDelay <= 0) {
                             if (maxRetries == 0) {
                                 document.title = "failed " + lvlTitle + ": " + title
-                                errorContainer.innerHTML = "retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]"
+                                addError("retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
                                 break
                             }
                             // =========== didn't see the required color => try to click again and wait one more time ==========
                             if (retries > 0) {
                                 document.title = "failed " + lvlTitle + ": " + title
-                                errorContainer.innerHTML = "retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]"
+                                addError("retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
                                 retries--
                                 maxDelay = MAX_WAIT_BEFORE_RETRY
                                 await runActions([prevClickAction], macro)
                             } else {
                                 document.title = "skipped " + lvlTitle + ": " + title
-                                errorContainer.innerHTML = "skipped waiting " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]"
+                                addError("skipped waiting " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
                                 if (RELOAD_PAGE_ON_FAILURE) {
                                     location.reload()
                                 }
@@ -1245,7 +1350,6 @@
 
             fireMouse('mousedown', startX, startY, 1)
             fireTouch('touchstart', startX, startY)
-            canvas.setPointerCapture(touchId)
 
             await sleep(16)
             for (let i = 1; i <= steps; i++) {
@@ -1256,7 +1360,7 @@
                 fireTouch('touchmove', cx, cy)
                 await sleep(duration / steps)
             }
-
+            await sleep(500)
             fireMouse('mouseup', endX, endY, 0)
             fireTouch('touchend', endX, endY)
         }
@@ -1289,7 +1393,7 @@
                 color: [r,g,b],
             }
 
-            document.getElementById('errorContainer').innerHTML = JSON.stringify(clickObj)
+            addError(JSON.stringify(clickObj))
             document.getElementById('errorContainer').style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${a / 255})`
             document.getElementById('errorContainer').style.color = "white"
             //console.log(JSON.stringify(clickObj))
@@ -1459,43 +1563,46 @@
                 ], MACRO_DUNGEON)
             }
 
+            const battleActions = [waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, delay(EXTRA_DELAY_BEFORE_CONFIRM_BATTLE), confirmBattle]
+            const initialFloorRooms = [checkRoomColors, roomLeft, roomRight, roomMid]
+
             await runActions([
                 jumpToRightGate, jumpToMidGate, jumpToLeftGate, jumpToFloor1, jumpToFloor2,
-                gateRight, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateRight, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToFloor2,
-                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate, jumpToLeftGate,
-                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate, jumpToLeftGate,
-                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToLeftGate, jumpToRightGate,
-                gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToFloor1, jumpToMidGate,
                 floor1Done, waitForFloorConfirm, floorConfirm, delay(EXTRA_FLOOR_DELAY_FIRST_FLOOR),
-                gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
-                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate,
-                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate,
-                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
-                gateRight, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), checkRoomColors, roomLeft, roomRight, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
+                gateRight, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 floor2Done, waitForFloorConfirm, floorConfirm, delay(EXTRA_FLOOR_DELAY_FIRST_FLOOR),
             ], MACRO_DUNGEON)
 
             for (let i = 0; i < floors; i++) {
                 if (isRunningMacro != MACRO_DUNGEON) break
                 await runActions([
-                    title("lvl1"), waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl2"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl3"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl4"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl5"), delay(1000), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+                    title("lvl1"), waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl2"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl3"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl4"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl5"), delay(1000), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm,
-                    title("lvl6"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl7"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl8"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl9"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
-                    title("lvl0"), waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattle,
+                    title("lvl6"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl7"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl8"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl9"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl0"), waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("floor2"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
                 ], MACRO_DUNGEON)
             }
@@ -1507,7 +1614,7 @@
             }
         }
 
-        async function runFrontier() {
+        async function runFrontier(params = []) {
             if (isRunningMacro == MACRO_FRONTIER) {
                 await releaseWakeLock()
                 isRunningMacro = null
@@ -1515,23 +1622,24 @@
             }
             isRunningMacro = MACRO_FRONTIER
             await enableWakeLock()
+
+            gameCanvas.focus()
             gameArea = gameCanvas.getBoundingClientRect()
             canvasScaleX = gameCanvas.width / gameArea.width
             canvasScaleY = gameCanvas.height / gameArea.height
-
-            function delay(msec) {
-                return {x: 2, y: 2, delay: msec, actionType: actionDelay}
-            }
 
             const openFrontier = {x: 0.46412, y: 0.239544, delay: 500, actionType: actionClick, title: "click frontier"}
             const clickToBattle = {x: 0.9096045197740112, y: 0.8886597938144329, delay: 200, actionType: actionClick, title: "click to battle"}
             const clickAutoBattle = {x: 0.8935969868173258, y: 0.7608247422680412, delay: 200, actionType: actionClick, title: "click auto"}
             const clickContinue = {x: 0.9030131826741996, y: 0.8907216494845361, delay: 200, actionType: actionClick, title: "click continue"}
             const clickManageTeams = {x: 0.782407, y: 0.719899, delay: 300, actionType: actionClick, title: "click manage teams"}
-            const scrollDown4 = {x: 0.5, y: 0.833967, altX: 0.5, altY: 0.178707, delay: 3000, actionType: actionDragDrop, title: "scroll +4 teams"}
-            const move1to4 = {x: 0.135417, y: 0.833967, altX: 0.135417, altY: 0.178707, delay: 3000, actionType: actionDragDrop, title: "swap 1 with 4"}
 
-            await runActions([scrollDown4, move1to4, scrollDown4, move1to4], MACRO_FRONTIER)
+            const scrollDown4 = {x: 0.5, y: 0.833967, altX: 0.5, altY: 0.178707, delay: 500, actionType: actionDragDrop, title: "scroll +4 teams"}
+            const move1to4 = {x: 0.135417, y: 0.833967, altX: 0.135417, altY: 0.178707, delay: 500, actionType: actionDragDrop, title: "swap 1 with 4"}
+
+            await runActions([
+                move1to4, scrollDown4, move1to4
+            ], MACRO_FRONTIER)
             //await runActions([openFrontier, delay(2000), clickToBattle, delay(2000), clickManageTeams, delay(2000), scrollDown4, scrollDown4, move1to4, scrollDown4, move1to4])
 
             /*for(let i=0; i<10000; i++) {
@@ -1638,12 +1746,12 @@
 
             function clickAndStartExpAction(x, y) {
                 return [
-                    {x: x, y: y, delay: 50, actionType: actionClick, title: clickTitle},
+                    {x: x, y: y, delay: 0, actionType: actionClick, title: clickTitle},
                     {x: 0.721644, y: 0.143219, color:[24,12,8], actionType: actionJumpIfNot, title: clickTitle},
-                    {x: 0.587384, y: 0.774398, delay: 2000, actionType: actionClick, title: "click start"},
+                    {x: 0.587384, y: 0.774398, delay: 500, actionType: actionClick, title: "click start"},
                     {x: 0.795718, y: 0.888466, delay: 500, actionType: actionClick, title: "click auto heroes"},
-                    {x: 0.795718, y: 0.888466, delay: 1000, actionType: actionClick, title: "click start with these hereos"},
-                    {x: 0.826968, y: 0.095057, delay: 1000, actionType: actionClick, title: "click close"}
+                    {x: 0.795718, y: 0.888466, delay: 500, actionType: actionClick, title: "click start with these hereos"},
+                    {x: 0.826968, y: 0.095057, delay: 500, actionType: actionClick, title: "click close"}
                 ]
             }
 
@@ -1656,8 +1764,8 @@
                 {x: 0.969907, y: 0.060837, delay: 1000, actionType: actionClick, title: closeValkyrieTitle},
                 {x: 0.501736, y: 0.667934, delay: 1000, actionType: actionClick, title: "Navigate expeditions"}
             ]
-            for (let x = 0.85; x > 0; x -= 0.07) {
-                for (let y = 0.94; y > 0; y -= 0.06) {
+            for (let x = 0.9; x > 0; x -= 0.13) {
+                for (let y = 0.81; y > 0.05; y -= 0.06) {
                     const act = clickAndStartExpAction(x, y)
                     actions.push(...act)
                 }
@@ -1673,7 +1781,15 @@
         }
 
         async function runTower(macro = MACRO_DAILY) {
-
+            const leaveTowerTitle = "Leave tower"
+            let actions = [
+                {x: 0.683449, y: 0.309886, actionType: actionClick, delay: 1000, title: "Open tower"},
+                {x: 0.638889, y: 0.731939, actionType: actionJumpIfNot, color: [96, 163, 57], title: leaveTowerTitle},
+                {x: 0.638889, y: 0.731939, actionType: actionClick, delay: 1000, title: "Open 33 chests for 2k emeralds"},
+                {x: 0.711806, y: 0.900507, actionType: actionWaitForColor, color: [96, 163, 57], delay: 5000},
+                {x: 0.971065, y: 0.050063, actionType: actionClick, delay: 1000, title: leaveTowerTitle}
+            ]
+            await runActions(actions, macro)
         }
 
         async function runHydra(macro = MACRO_DAILY) {
@@ -1804,9 +1920,9 @@
                 await runExpeditions(MACRO_DAILY)
             }
 
-            /*if (isRunningMacro && params.tower) {
+            if (isRunningMacro && params.tower) {
                 await runTower(MACRO_DAILY)
-            }*/
+            }
 
             if (isRunningMacro && params.hydra) {
                 await runHydra(MACRO_DAILY)
