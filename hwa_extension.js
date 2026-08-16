@@ -116,7 +116,7 @@
         const container = document.getElementById('errorContainer')
         if (!container) return
 
-        const span = document.createElement('div')
+        const span = document.createElement('span')
         span.textContent = msg
         container.appendChild(span)
 
@@ -1633,7 +1633,7 @@
             let checkHP = delay(1)
 
             if (titansHP[0] > 0) {
-                checkHP = {x: 0, xx: titansHP, y: 0.461, color: [56,199,28], actionType: actionInterruptIfNotColor, title: "Check titans HP"}
+                checkHP = {x: 0, xx: titansHP, y: 0.461, color: [56,199,28], actionType: actionInterruptIfNotColor, title: "Check titans HP", threshold: 20}
             }
 
             const confirmBattle = {x: 0.641372, y: 0.822323, delay: DELAY_FOR_TITANS_WALK, actionType: actionClick, title: "clicking on confirm battle result"}
