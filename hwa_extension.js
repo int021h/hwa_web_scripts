@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-16 14:37
+// @version      2026-08-16_14:43
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -929,7 +929,115 @@
                     setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                 }
             })
-            
+
+            // ---------- splitter ----------
+            const frontierSplitter = document.createElement('hr')
+            Object.assign(frontierSplitter.style, {
+                margin: '10px 0',
+                border: 'none',
+                borderTop: '1px solid rgba(120,180,255,0.35)'
+            })
+            dailyPopup.appendChild(frontierSplitter)
+
+            // ---------- eternal frontier ----------
+            const frontierTitle = document.createElement('div')
+            frontierTitle.textContent = 'Eternal frontier'
+            Object.assign(frontierTitle.style, {
+                fontWeight: 'bold',
+                marginBottom: '8px',
+                color: '#eef7ff',
+                textAlign: 'center'
+            })
+            dailyPopup.appendChild(frontierTitle)
+
+            const FRONTIER_GROUPS_STORAGE_KEY = 'frontierGroups'
+
+            const frontierInput = document.createElement('input')
+            frontierInput.type = 'text'
+            frontierInput.placeholder = 'e.g. 1-3,6-7,11-15'
+            frontierInput.value = localStorage.getItem(FRONTIER_GROUPS_STORAGE_KEY) || ''
+            Object.assign(frontierInput.style, {
+                width: '100%',
+                boxSizing: 'border-box',
+                borderRadius: '6px',
+                border: '1px solid rgba(120,180,255,0.5)',
+                background: 'rgba(255,255,255,0.08)',
+                color: '#eef7ff',
+                padding: '4px 6px',
+                marginBottom: '8px',
+                transition: 'background-color 0.2s ease, border-color 0.2s ease'
+            })
+            dailyPopup.appendChild(frontierInput)
+
+            function flashInvalidInput(input) {
+                const originalBorder = input.style.border
+                const originalBackground = input.style.background
+                input.style.border = '1px solid #ff4444'
+                input.style.background = 'rgba(255,68,68,0.25)'
+                setTimeout(() => {
+                    input.style.border = originalBorder
+                    input.style.background = originalBackground
+                }, 1000)
+            }
+
+            function parseFrontierGroups(text) {
+                const groups = text.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                if (groups.length === 0) {
+                    return null
+                }
+                const pairs = []
+                for (const group of groups) {
+                    const match = group.match(/^(\d+)(?:-(\d+))?$/)
+                    if (!match) {
+                        return null
+                    }
+                    const start = parseInt(match[1], 10)
+                    const end = match[2] !== undefined ? parseInt(match[2], 10) : start
+                    if (end < start) {
+                        return null
+                    }
+                    pairs.push([start, end])
+                }
+                return pairs
+            }
+
+            const frontierStartButton = document.createElement('button')
+            frontierStartButton.textContent = 'Start frontier'
+            Object.assign(frontierStartButton.style, {
+                width: '100%',
+                background: 'linear-gradient(180deg, #8bd58b 0%, #3b9144 55%, #216128 100%)',
+                color: '#efffec',
+                border: '1px solid #7ee889',
+                borderRadius: '8px',
+                padding: '5px 12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+                boxShadow: '0 0 10px rgba(80,220,100,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+                transition: '0.15s ease'
+            })
+            frontierStartButton.onmouseenter = () => {
+                frontierStartButton.style.filter = 'brightness(1.12)'
+            }
+            frontierStartButton.onmouseleave = () => {
+                frontierStartButton.style.filter = 'brightness(1)'
+            }
+            dailyPopup.appendChild(frontierStartButton)
+
+            frontierStartButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+
+                const pairs = parseFrontierGroups(frontierInput.value)
+                if (!pairs) {
+                    flashInvalidInput(frontierInput)
+                    return
+                }
+
+                localStorage.setItem(FRONTIER_GROUPS_STORAGE_KEY, frontierInput.value)
+                dailyPopup.style.display = 'none'
+                runFrontier(pairs)
+            })
+
             document.body.appendChild(dailyPopup)
 
             dailyButton.addEventListener('click', async (e) => {
@@ -1024,7 +1132,7 @@
             const errorContainerEl = document.createElement('div')
             errorContainerEl.id = 'errorContainer'
             Object.assign(errorContainerEl.style, {
-                color: 'red',
+                color: 'white',
                 fontSize: '12px',
                 maxHeight: '250px',
                 overflowY: 'auto',
@@ -1394,8 +1502,6 @@
             }
 
             addError(JSON.stringify(clickObj))
-            document.getElementById('errorContainer').style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${a / 255})`
-            document.getElementById('errorContainer').style.color = "white"
             //console.log(JSON.stringify(clickObj))
         }
 
