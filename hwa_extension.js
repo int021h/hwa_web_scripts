@@ -117,6 +117,7 @@
         if (!container) return
 
         const span = document.createElement('span')
+        span.style.display = 'block'
         span.textContent = msg
         container.appendChild(span)
 
@@ -930,11 +931,119 @@
                 }
             })
 
+            // ---------- splitter ----------
+            const frontierSplitter = document.createElement('hr')
+            Object.assign(frontierSplitter.style, {
+                margin: '10px 0',
+                border: 'none',
+                borderTop: '1px solid rgba(120,180,255,0.35)'
+            })
+            dailyPopup.appendChild(frontierSplitter)
+
+            // ---------- eternal frontier ----------
+            const frontierTitle = document.createElement('div')
+            frontierTitle.textContent = 'Eternal frontier'
+            Object.assign(frontierTitle.style, {
+                fontWeight: 'bold',
+                marginBottom: '8px',
+                color: '#eef7ff',
+                textAlign: 'center'
+            })
+            dailyPopup.appendChild(frontierTitle)
+
+            const FRONTIER_GROUPS_STORAGE_KEY = 'frontierGroups'
+
+            const frontierInput = document.createElement('input')
+            frontierInput.type = 'text'
+            frontierInput.placeholder = 'e.g. 1-3,6-7,11-15'
+            frontierInput.value = localStorage.getItem(FRONTIER_GROUPS_STORAGE_KEY) || ''
+            Object.assign(frontierInput.style, {
+                width: '100%',
+                boxSizing: 'border-box',
+                borderRadius: '6px',
+                border: '1px solid rgba(120,180,255,0.5)',
+                background: 'rgba(255,255,255,0.08)',
+                color: '#eef7ff',
+                padding: '4px 6px',
+                marginBottom: '8px',
+                transition: 'background-color 0.2s ease, border-color 0.2s ease'
+            })
+            dailyPopup.appendChild(frontierInput)
+
+            function flashInvalidInput(input) {
+                const originalBorder = input.style.border
+                const originalBackground = input.style.background
+                input.style.border = '1px solid #ff4444'
+                input.style.background = 'rgba(255,68,68,0.25)'
+                setTimeout(() => {
+                    input.style.border = originalBorder
+                    input.style.background = originalBackground
+                }, 1000)
+            }
+
+            function parseFrontierGroups(text) {
+                const groups = text.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                if (groups.length === 0) {
+                    return null
+                }
+                const pairs = []
+                for (const group of groups) {
+                    const match = group.match(/^(\d+)(?:-(\d+))?$/)
+                    if (!match) {
+                        return null
+                    }
+                    const start = parseInt(match[1], 10)
+                    const end = match[2] !== undefined ? parseInt(match[2], 10) : start
+                    if (end < start) {
+                        return null
+                    }
+                    pairs.push([start, end])
+                }
+                return pairs
+            }
+
+            const frontierStartButton = document.createElement('button')
+            frontierStartButton.textContent = 'Start frontier'
+            Object.assign(frontierStartButton.style, {
+                width: '100%',
+                background: 'linear-gradient(180deg, #8bd58b 0%, #3b9144 55%, #216128 100%)',
+                color: '#efffec',
+                border: '1px solid #7ee889',
+                borderRadius: '8px',
+                padding: '5px 12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+                boxShadow: '0 0 10px rgba(80,220,100,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+                transition: '0.15s ease'
+            })
+            frontierStartButton.onmouseenter = () => {
+                frontierStartButton.style.filter = 'brightness(1.12)'
+            }
+            frontierStartButton.onmouseleave = () => {
+                frontierStartButton.style.filter = 'brightness(1)'
+            }
+            dailyPopup.appendChild(frontierStartButton)
+
+            frontierStartButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+
+                const pairs = parseFrontierGroups(frontierInput.value)
+                if (!pairs) {
+                    flashInvalidInput(frontierInput)
+                    return
+                }
+
+                localStorage.setItem(FRONTIER_GROUPS_STORAGE_KEY, frontierInput.value)
+                dailyPopup.style.display = 'none'
+                runFrontier(pairs)
+            })
+
             document.body.appendChild(dailyPopup)
 
             dailyButton.addEventListener('click', async (e) => {
                 e.stopPropagation()
-                if (isRunningMacro == MACRO_DAILY) {
+                if (isRunningMacro == MACRO_DAILY || isRunningMacro == MACRO_FRONTIER) {
                     await releaseWakeLock()
                     setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                     isRunningMacro = null
@@ -1128,39 +1237,69 @@
                     if (delay > 0) {
                         await sleep(delay, macro)
                     }
-                } else if (actionType == actionInterruptIfColor) {
-                    for (let i = 0; i<xx.length; i++) {
-                        let testPixel = []
-                        testPixel = await readPixelOnDraw(
-                            gameArea.width * xx[i] * canvasScaleX,
-                            gameArea.height * y * canvasScaleY,
-                        )
-                        if (colorsAreSame(testPixel, color, threshold)) {
-                            await sleep(5000, macro)
-                            if (colorsAreSame(testPixel, color, threshold)) {
-                                const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo low to continue"
-                                document.title = error
-                                addError(error)
-                                return
+                } else if (actionType == actionInterruptIfColor || actionType == actionInterruptIfNotColor) {
+                    let isOk = true
+                    let titanI = 0
+                    let titanX = 0
+                    let testPixel = []
+
+                    for (let g=0; g<xx.length; g++) {
+                        const hp = xx[g]
+                        isOk = true
+                        for (let i=0; i<hp.length; i++) {
+                            let testPixel = []
+                            testPixel = await readPixelOnDraw(
+                                gameArea.width * hp[i] * canvasScaleX,
+                                gameArea.height * y * canvasScaleY,
+                            )
+
+                            if ((actionType == actionInterruptIfColor && colorsAreSame(testPixel, color, threshold)) || (actionType == actionInterruptIfNotColor && !colorsAreSame(testPixel, color, threshold))) {
+                                isOk = false
+                                titanI = i
+                                titanX = hp[i]
+                                addError("HP check failed for " + hp.length + " titans")
+                                break
+                            }
+                        }
+
+                        if (isOk) {
+                            addError("HP check succeeded for " + hp.length + " titans")
+                            break
+                        }
+                    }
+
+                    if (!isOk) {
+                        await sleep(5000, macro)
+                        isOk = true
+                        for (let g=0; g<xx.length; g++) {
+                            const hp = xx[g]
+                            isOk = true
+                            for (let i=0; i<hp.length; i++) {
+                                testPixel = await readPixelOnDraw(
+                                    gameArea.width * hp[i] * canvasScaleX,
+                                    gameArea.height * y * canvasScaleY,
+                                )
+                                if ((actionType == actionInterruptIfColor && colorsAreSame(testPixel, color, threshold)) || (actionType == actionInterruptIfNotColor && !colorsAreSame(testPixel, color, threshold))) {
+                                    isOk = false
+                                    titanI = i
+                                    titanX = hp[i]
+                                    addError("HP check failed for " + hp.length + " titans")
+                                    break
+                                }
+                            }
+
+                            if (isOk) {
+                                addError("HP check succeeded for " + hp.length + " titans")
+                                break
                             }
                         }
                     }
-                } else if (actionType == actionInterruptIfNotColor) {
-                    for (let i = 0; i<xx.length; i++) {
-                        let testPixel = []
-                        testPixel = await readPixelOnDraw(
-                            gameArea.width * xx[i] * canvasScaleX,
-                            gameArea.height * y * canvasScaleY,
-                        )
-                        if (!colorsAreSame(testPixel, color, threshold)) {
-                            await sleep(5000, macro)
-                            if (!colorsAreSame(testPixel, color, threshold)) {
-                                const error = lvlTitle + ":" + (i+1) + " titan's HP is tooo (" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + ") at x:" + xx[i] + " y:" + y
-                                document.title = error
-                                addError(error)
-                                return
-                            }
-                        }
+
+                    if (!isOk) {
+                        const error = lvlTitle + ": " + (titanI + 1) + " titan's HP is tooo low (" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + ") at x:" + titanX + " y:" + y
+                        document.title = error
+                        addError(error)
+                        return
                     }
                 } else if (actionType == actionJumpIf) {
                     let testPixel = await readPixelOnDraw(
@@ -1360,7 +1499,7 @@
                 fireTouch('touchmove', cx, cy)
                 await sleep(duration / steps)
             }
-            await sleep(500)
+            await sleep(700)
             fireMouse('mouseup', endX, endY, 0)
             fireTouch('touchend', endX, endY)
         }
@@ -1454,11 +1593,11 @@
                 setActivated(dungeonMacroButton, false, BUTTON_TEXT_STOP_DUNGEON, BUTTON_TEXT_RUN_DUNGEON)
                 await releaseWakeLock()
                 return
-            } else {
-                setActivated(dungeonMacroButton, true, BUTTON_TEXT_STOP_DUNGEON, BUTTON_TEXT_RUN_DUNGEON)
-                isRunningMacro = MACRO_DUNGEON
-                await enableWakeLock()
             }
+            localStorage.setItem("last_macro", MACRO_DUNGEON)
+            setActivated(dungeonMacroButton, true, BUTTON_TEXT_STOP_DUNGEON, BUTTON_TEXT_RUN_DUNGEON)
+            isRunningMacro = MACRO_DUNGEON
+            await enableWakeLock()
 
             // load settings
             const floors = MAX_FLOORS
@@ -1486,12 +1625,16 @@
             }
 
 
-            const titansHpPoints = [[0.316481, 0.368048], [0.39636, 0.446916], [0.4752275, 0.527806], [0.555106, 0.608696], [0.634985, 0.688574]]
+            const titansHp5Points = [[0.316481, 0.368048], [0.39636, 0.446916], [0.4752275, 0.527806], [0.555106, 0.608696], [0.634985, 0.688574]]
+            const titansHp4Points = [[0.354745, 0.406829], [0.434606, 0.48669], [0.514468, 0.565972], [0.59375, 0.645833]]
 
-            let titansHP = [0,0,0,0,0]
+            let titansHP = [[0,0,0,0,0], [0,0,0,0]]
             if (hpLimit < 100) {
                 for (let i = 0; i<5; i++) {
-                    titansHP[i] = getPointInRange(titansHpPoints[i][0], titansHpPoints[i][1], hpLimit)
+                    titansHP[0][i] = getPointInRange(titansHp5Points[i][0], titansHp5Points[i][1], hpLimit)
+                    if (i < 4) {
+                        titansHP[1][i] = getPointInRange(titansHp4Points[i][0], titansHp4Points[i][1], hpLimit)
+                    }
                 }
             }
 
@@ -1523,8 +1666,7 @@
             const waitForConfirmBattle = {x: 0.60083, y: 0.127563, color: [137,1,0], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for battle result popup"}
 
             let checkHP = delay(1)
-
-            if (titansHP[0] > 0) {
+            if (titansHP[0][0] > 0) {
                 checkHP = {x: 0, xx: titansHP, y: 0.461, color: [56,199,28], actionType: actionInterruptIfNotColor, title: "Check titans HP", threshold: 20}
             }
 
@@ -1561,7 +1703,8 @@
                 ], MACRO_DUNGEON)
             }
 
-            const battleActions = [waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, delay(EXTRA_DELAY_BEFORE_CONFIRM_BATTLE), confirmBattle]
+            const confirmBattleDelay = {actionType: actionDelay, delay: EXTRA_DELAY_BEFORE_CONFIRM_BATTLE, title: "Waiting for confirm battle"}
+            const battleActions = [waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattleDelay, confirmBattle]
             const initialFloorRooms = [checkRoomColors, roomLeft, roomRight, roomMid]
 
             await runActions([
@@ -1614,38 +1757,16 @@
 
         async function runFrontier(params = []) {
             if (isRunningMacro == MACRO_FRONTIER) {
+                setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                 await releaseWakeLock()
                 isRunningMacro = null
                 return
             }
+            setActivated(dailyButton, true, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
             isRunningMacro = MACRO_FRONTIER
             await enableWakeLock()
-
-            gameCanvas.focus()
-            gameArea = gameCanvas.getBoundingClientRect()
-            canvasScaleX = gameCanvas.width / gameArea.width
-            canvasScaleY = gameCanvas.height / gameArea.height
-
-            const openFrontier = {x: 0.46412, y: 0.239544, delay: 500, actionType: actionClick, title: "click frontier"}
-            const clickToBattle = {x: 0.9096045197740112, y: 0.8886597938144329, delay: 200, actionType: actionClick, title: "click to battle"}
-            const clickAutoBattle = {x: 0.8935969868173258, y: 0.7608247422680412, delay: 200, actionType: actionClick, title: "click auto"}
-            const clickContinue = {x: 0.9030131826741996, y: 0.8907216494845361, delay: 200, actionType: actionClick, title: "click continue"}
-            const clickManageTeams = {x: 0.782407, y: 0.719899, delay: 300, actionType: actionClick, title: "click manage teams"}
-
-            const scrollDown4 = {x: 0.5, y: 0.833967, altX: 0.5, altY: 0.178707, delay: 500, actionType: actionDragDrop, title: "scroll +4 teams"}
-            const move1to4 = {x: 0.135417, y: 0.833967, altX: 0.135417, altY: 0.178707, delay: 500, actionType: actionDragDrop, title: "swap 1 with 4"}
-
-            await runActions([
-                move1to4, scrollDown4, move1to4
-            ], MACRO_FRONTIER)
-            //await runActions([openFrontier, delay(2000), clickToBattle, delay(2000), clickManageTeams, delay(2000), scrollDown4, scrollDown4, move1to4, scrollDown4, move1to4])
-
-            /*for(let i=0; i<10000; i++) {
-                if (!isRunningMacro) return
-                //await runActions([clickBuyTitanPotion])
-                //await runActions([clickBuyHorns])
-                await runActions([clickToBattle, clickAutoBattle, clickContinue, delay(1000)])
-            }*/
+            
+            setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
             if (isRunningMacro == MACRO_FRONTIER) {
                 await releaseWakeLock()
                 isRunningMacro = null
@@ -1949,6 +2070,10 @@
         addNiceToolbar()
 
         fromHomePage = true
-        await runDungeonMacro()
+        if (localStorage.getItem("last_macro") == MACRO_FRONTIER) {
+            await runFrontier([])
+        } else {
+            await runDungeonMacro()
+        }
     }
 })();
