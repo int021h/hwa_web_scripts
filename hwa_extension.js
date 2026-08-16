@@ -49,9 +49,10 @@
     const BUTTON_TEXT_RUN_DEBUG = '👀'
     const BUTTON_TEXT_STOP_DEBUG = '🚫'
 
-    const BUTTON_TEXT_RUN_REPEAT_CLICK = 'Repeat next click'
-    const BUTTON_TEXT_ARMED_REPEAT_CLICK = 'Click on the game...'
+    const BUTTON_TEXT_RUN_REPEAT_CLICK = 'Capture click'
+    const BUTTON_TEXT_ARMED_REPEAT_CLICK = 'Recording...'
     const BUTTON_TEXT_STOP_REPEAT_CLICK = 'Stop repeating'
+    const BUTTON_TEXT_STOP_RECORDING = 'Stop recording'
 
     const MACRO_DUNGEON = 'dungeon'
     const MACRO_DAILY = 'daily'
@@ -159,8 +160,9 @@
         let pendingRead = null
         const originalRAF = window.requestAnimationFrame.bind(window)
 
-        let repeatNextClick = false
-        let repeatClickCoordinates = null
+        let isRecordingClicks = false
+        let recordedClicks = []
+        let recordingConfig = { repeats: 1000, delay: 300 }
 
         async function releaseWakeLock() {
             if (wakeLock != null) {
@@ -720,7 +722,17 @@
             })
             dailyPopup.appendChild(repeatClickSplitter)
 
-            // ---------- repeat next click ----------
+            // ---------- repeat click ----------
+            const repeatClickTitle = document.createElement('div')
+            repeatClickTitle.textContent = 'Repeat click'
+            Object.assign(repeatClickTitle.style, {
+                fontWeight: 'bold',
+                marginBottom: '8px',
+                color: '#eef7ff',
+                textAlign: 'center'
+            })
+            dailyPopup.appendChild(repeatClickTitle)
+
             const repeatClickRow = document.createElement('div')
             Object.assign(repeatClickRow.style, {
                 display: 'flex',
@@ -751,7 +763,20 @@
                 repeatClickButton.style.filter = 'brightness(1)'
             }
 
-            function makeRepeatClickInput(title, defaultValue, storageKey) {
+            function makeRepeatClickInput(labelText, title, defaultValue, storageKey) {
+                const wrapper = document.createElement('label')
+                Object.assign(wrapper.style, {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: '#bcd6f5',
+                    fontSize: '12px'
+                })
+
+                const label = document.createElement('span')
+                label.textContent = labelText
+                wrapper.appendChild(label)
+
                 const input = document.createElement('input')
                 input.type = 'text'
                 input.title = title
@@ -765,16 +790,86 @@
                     padding: '4px 6px',
                     textAlign: 'center'
                 })
-                return input
+                wrapper.appendChild(input)
+
+                return { wrapper, input }
             }
 
-            const repeatClickCountInput = makeRepeatClickInput('Number of repeats', 1000, 'repeatClickCount')
-            const repeatClickDelayInput = makeRepeatClickInput('Delay between clicks (ms)', 300, 'repeatClickDelay')
+            const repeatClickCount = makeRepeatClickInput('Repeats:', 'Number of times to repeat the recorded sequence', 1000, 'repeatClickCount')
+            const repeatClickDelay = makeRepeatClickInput('Delay:', 'Delay between repeats (ms)', 300, 'repeatClickDelay')
+            const repeatClickCountInput = repeatClickCount.input
+            const repeatClickDelayInput = repeatClickDelay.input
 
             repeatClickRow.appendChild(repeatClickButton)
-            repeatClickRow.appendChild(repeatClickCountInput)
-            repeatClickRow.appendChild(repeatClickDelayInput)
+            repeatClickRow.appendChild(repeatClickCount.wrapper)
+            repeatClickRow.appendChild(repeatClickDelay.wrapper)
             dailyPopup.appendChild(repeatClickRow)
+
+            const repeatClickHint = document.createElement('div')
+            repeatClickHint.textContent = 'Click "Capture click", then make the clicks in the game you want repeated. Click "Stop recording" when done — the whole sequence replays N times, with a D ms delay between repeats (delays between the recorded clicks themselves are captured automatically).'
+            Object.assign(repeatClickHint.style, {
+                marginTop: '6px',
+                color: '#8fa8c4',
+                fontSize: '11px',
+                lineHeight: '1.4'
+            })
+            dailyPopup.appendChild(repeatClickHint)
+
+            // ---------- stop recording button (shown under the Run... button while recording) ----------
+            const stopRecordingButton = document.createElement('button')
+            stopRecordingButton.id = 'stopRecordingButton'
+            stopRecordingButton.textContent = BUTTON_TEXT_STOP_RECORDING
+            Object.assign(stopRecordingButton.style, {
+                position: 'fixed',
+                display: 'none',
+                zIndex: '9999999',
+                background: 'linear-gradient(180deg, #ff8a7a 0%, #b3261e 55%, #5e0d0d 100%)',
+                color: '#fff0f0',
+                border: '1px solid #ffb0a8',
+                borderRadius: '8px',
+                padding: '4px 12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                boxShadow: '0 0 12px rgba(255,70,70,0.45), inset 0 1px 0 rgba(255,255,255,0.18)',
+                transition: '0.15s ease'
+            })
+            stopRecordingButton.onmouseenter = () => {
+                stopRecordingButton.style.filter = 'brightness(1.12)'
+            }
+            stopRecordingButton.onmouseleave = () => {
+                stopRecordingButton.style.filter = 'brightness(1)'
+            }
+            document.body.appendChild(stopRecordingButton)
+
+            function showStopRecordingButton() {
+                const rect = dailyButton.getBoundingClientRect()
+                stopRecordingButton.style.left = `${rect.left}px`
+                stopRecordingButton.style.top = `${rect.bottom + 6}px`
+                stopRecordingButton.style.display = 'block'
+            }
+
+            function hideStopRecordingButton() {
+                stopRecordingButton.style.display = 'none'
+            }
+
+            function startRecordingClicks(repeats, delay) {
+                recordedClicks = []
+                recordingConfig = { repeats, delay }
+                isRecordingClicks = true
+                if (!DEBUG_CLICKS) {
+                    gameCanvas.addEventListener('click', logMouse)
+                }
+                showStopRecordingButton()
+            }
+
+            function stopRecordingClicks() {
+                isRecordingClicks = false
+                if (!DEBUG_CLICKS) {
+                    gameCanvas.removeEventListener('click', logMouse)
+                }
+                hideStopRecordingButton()
+            }
 
             repeatClickButton.addEventListener('click', (e) => {
                 e.stopPropagation()
@@ -787,8 +882,8 @@
                     return
                 }
 
-                if (repeatNextClick) {
-                    armRepeatClick(false)
+                if (isRecordingClicks) {
+                    stopRecordingClicks()
                     setActivated(repeatClickButton, false, BUTTON_TEXT_ARMED_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
                     setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                     return
@@ -802,7 +897,19 @@
                 setActivated(repeatClickButton, true, BUTTON_TEXT_ARMED_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
                 setActivated(dailyButton, true, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                 dailyPopup.style.display = 'none'
-                armRepeatClick(true, repeats, delay)
+                startRecordingClicks(repeats, delay)
+            })
+
+            stopRecordingButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+                stopRecordingClicks()
+
+                if (recordedClicks.length > 0) {
+                    runRepeatClickMacro([...recordedClicks], recordingConfig.repeats, recordingConfig.delay)
+                } else {
+                    setActivated(repeatClickButton, false, BUTTON_TEXT_ARMED_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
+                    setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
+                }
             })
 
             document.body.appendChild(dailyPopup)
@@ -816,8 +923,10 @@
                     return
                 }
 
-                if (repeatNextClick || isRunningMacro == MACRO_REPEAT_CLICK) {
-                    armRepeatClick(false)
+                if (isRecordingClicks || isRunningMacro == MACRO_REPEAT_CLICK) {
+                    if (isRecordingClicks) {
+                        stopRecordingClicks()
+                    }
                     if (isRunningMacro == MACRO_REPEAT_CLICK) {
                         isRunningMacro = null
                         await releaseWakeLock()
@@ -1158,12 +1267,10 @@
             const gameX = e.clientX - gameArea.x
             const gameY = e.clientY - gameArea.y
 
-            if (repeatNextClick) {
-                const { repeats, delay } = repeatClickCoordinates
+            if (isRecordingClicks) {
                 const x = Number((gameX / gameArea.width).toFixed(6))
                 const y = Number((gameY / gameArea.height).toFixed(6))
-                armRepeatClick(false)
-                runRepeatClickMacro(x, y, repeats, delay)
+                recordedClicks.push({ x, y, time: Date.now() })
                 return
             }
 
@@ -1188,34 +1295,29 @@
             //console.log(JSON.stringify(clickObj))
         }
 
-        function armRepeatClick(arm, repeats = 1000, delay = 300) {
-            repeatNextClick = arm
-            if (arm) {
-                repeatClickCoordinates = { repeats, delay }
-                if (!DEBUG_CLICKS) {
-                    gameCanvas.addEventListener('click', logMouse)
-                }
-            } else {
-                repeatClickCoordinates = null
-                if (!DEBUG_CLICKS) {
-                    gameCanvas.removeEventListener('click', logMouse)
-                }
-            }
+        function buildRepeatClickActions(clicks, repeatDelay) {
+            return clicks.map((click, i) => {
+                const isLast = i === clicks.length - 1
+                // delays between clicks are the recorded ones; the gap after the
+                // last click (before repeating the sequence) uses the entered delay
+                const delay = isLast ? repeatDelay : (clicks[i + 1].time - click.time)
+                return { x: click.x, y: click.y, delay: delay, actionType: actionClick, title: "repeating click" }
+            })
         }
 
-        async function runRepeatClickMacro(x, y, repeats, delay) {
-            if (isRunningMacro != null) {
+        async function runRepeatClickMacro(clicks, repeats, delay) {
+            if (isRunningMacro != null || clicks.length == 0) {
                 return
             }
             isRunningMacro = MACRO_REPEAT_CLICK
             setActivated(repeatClickButton, true, BUTTON_TEXT_STOP_REPEAT_CLICK, BUTTON_TEXT_RUN_REPEAT_CLICK)
             await enableWakeLock()
 
-            const clickAction = { x: x, y: y, delay: delay, actionType: actionClick, title: "repeating click" }
+            const actions = buildRepeatClickActions(clicks, delay)
 
             for (let i = 0; i < repeats; i++) {
                 if (isRunningMacro != MACRO_REPEAT_CLICK) break
-                await runActions([clickAction], MACRO_REPEAT_CLICK)
+                await runActions(actions, MACRO_REPEAT_CLICK)
             }
 
             if (isRunningMacro == MACRO_REPEAT_CLICK) {
