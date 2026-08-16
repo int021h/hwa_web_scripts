@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-09
+// @version      2026-08-16
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -806,7 +806,7 @@
             dailyPopup.appendChild(repeatClickRow)
 
             const repeatClickHint = document.createElement('div')
-            repeatClickHint.textContent = 'Click "Capture click", then make the clicks in the game you want repeated. Click "Stop recording" when done — the whole sequence replays N times, with a D ms delay between repeats (delays between the recorded clicks themselves are captured automatically).'
+            repeatClickHint.innerHTML = 'Click "Capture click", then make the clicks in the game you want repeated.<br>Click "Stop recording" when done — the whole sequence replays N times,<br>with a D ms delay between repeats<br><i>ps: delays between the recorded clicks themselves are captured automatically</i>.'
             Object.assign(repeatClickHint.style, {
                 marginTop: '6px',
                 color: '#8fa8c4',
