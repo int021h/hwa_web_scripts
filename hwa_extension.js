@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-16_19:05
+// @version      2026-08-18_01:54
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -302,6 +302,31 @@
                 button.style.color = '#fff6d6'
                 button.style.textShadow = '0 1px 2px rgba(0,0,0,0.7)'
             }
+        }
+
+        const FRONTIER_ATTEMPTS_STORAGE_KEY = 'frontierAttempts'
+        const FRONTIER_TEAMS_STORAGE_KEY = 'frontierTeams'
+        const FRONTIER_GROUPS_STORAGE_KEY = 'frontierGroups'
+
+        function parseFrontierGroups(text) {
+            const groups = text.split(',').map(s => s.trim()).filter(s => s.length > 0)
+            if (groups.length === 0) {
+                return null
+            }
+            const pairs = []
+            for (const group of groups) {
+                const match = group.match(/^(\d+)(?:-(\d+))?$/)
+                if (!match) {
+                    return null
+                }
+                const start = parseInt(match[1], 10)
+                const end = match[2] !== undefined ? parseInt(match[2], 10) : start
+                if (end < start) {
+                    return null
+                }
+                pairs.push([start, end])
+            }
+            return pairs
         }
 
         function addNiceToolbar() {
@@ -951,13 +976,29 @@
             })
             dailyPopup.appendChild(frontierTitle)
 
-            const FRONTIER_GROUPS_STORAGE_KEY = 'frontierGroups'
+            function makeFrontierFieldWrapper() {
+                const wrapper = document.createElement('div')
+                Object.assign(wrapper.style, {
+                    marginBottom: '8px'
+                })
+                return wrapper
+            }
 
-            const frontierInput = document.createElement('input')
-            frontierInput.type = 'text'
-            frontierInput.placeholder = 'e.g. 1-3,6-7,11-15'
-            frontierInput.value = localStorage.getItem(FRONTIER_GROUPS_STORAGE_KEY) || ''
-            Object.assign(frontierInput.style, {
+            function makeFrontierLabel(text, hint) {
+                const label = document.createElement('div')
+                label.textContent = text
+                if (hint) {
+                    label.title = hint
+                }
+                Object.assign(label.style, {
+                    color: '#bcd6f5',
+                    fontSize: '12px',
+                    marginBottom: '2px'
+                })
+                return label
+            }
+
+            const frontierFieldStyle = {
                 width: '100%',
                 boxSizing: 'border-box',
                 borderRadius: '6px',
@@ -965,10 +1006,102 @@
                 background: 'rgba(255,255,255,0.08)',
                 color: '#eef7ff',
                 padding: '4px 6px',
-                marginBottom: '8px',
                 transition: 'background-color 0.2s ease, border-color 0.2s ease'
+            }
+
+            function computeFrontierGroupsFromTeams(teamsCount) {
+                return `1-${teamsCount - 2},${teamsCount - 1}-${teamsCount}`
+            }
+
+            function updateGroupsFromTeamsInput() {
+                const teamsCount = parseInt(frontierTeamsInput.value, 10)
+                if (Number.isInteger(teamsCount)) {
+                    frontierInput.value = computeFrontierGroupsFromTeams(teamsCount)
+                }
+            }
+
+            // ---------- attempts ----------
+            const frontierAttemptsHint = 'Number of attempts before shuffling'
+            const frontierAttemptsWrapper = makeFrontierFieldWrapper()
+            frontierAttemptsWrapper.appendChild(makeFrontierLabel('Attempts', frontierAttemptsHint))
+            const frontierAttemptsInput = document.createElement('input')
+            frontierAttemptsInput.type = 'number'
+            frontierAttemptsInput.min = '1'
+            frontierAttemptsInput.step = '1'
+            frontierAttemptsInput.title = frontierAttemptsHint
+            frontierAttemptsInput.value = restoreInt(FRONTIER_ATTEMPTS_STORAGE_KEY, 3)
+            Object.assign(frontierAttemptsInput.style, frontierFieldStyle)
+            frontierAttemptsWrapper.appendChild(frontierAttemptsInput)
+            dailyPopup.appendChild(frontierAttemptsWrapper)
+
+            // ---------- teams ----------
+            const frontierTeamsHint = 'Number of your teams'
+            const frontierTeamsWrapper = makeFrontierFieldWrapper()
+            frontierTeamsWrapper.appendChild(makeFrontierLabel('Teams', frontierTeamsHint))
+            const frontierTeamsRow = document.createElement('div')
+            Object.assign(frontierTeamsRow.style, {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
             })
-            dailyPopup.appendChild(frontierInput)
+            const frontierStepperButtonStyle = {
+                width: '28px',
+                height: '26px',
+                flex: '0 0 auto',
+                borderRadius: '6px',
+                border: '1px solid rgba(120,180,255,0.5)',
+                background: 'rgba(255,255,255,0.08)',
+                color: '#eef7ff',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+            }
+            const frontierTeamsDecButton = document.createElement('button')
+            frontierTeamsDecButton.type = 'button'
+            frontierTeamsDecButton.textContent = '-'
+            Object.assign(frontierTeamsDecButton.style, frontierStepperButtonStyle)
+            const frontierTeamsInput = document.createElement('input')
+            frontierTeamsInput.type = 'number'
+            frontierTeamsInput.min = '1'
+            frontierTeamsInput.step = '1'
+            frontierTeamsInput.title = frontierTeamsHint
+            frontierTeamsInput.value = restoreInt(FRONTIER_TEAMS_STORAGE_KEY, 10)
+            Object.assign(frontierTeamsInput.style, frontierFieldStyle, { textAlign: 'center' })
+            const frontierTeamsIncButton = document.createElement('button')
+            frontierTeamsIncButton.type = 'button'
+            frontierTeamsIncButton.textContent = '+'
+            Object.assign(frontierTeamsIncButton.style, frontierStepperButtonStyle)
+            frontierTeamsDecButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+                const current = parseInt(frontierTeamsInput.value, 10) || 0
+                frontierTeamsInput.value = Math.max(1, current - 1)
+                updateGroupsFromTeamsInput()
+            })
+            frontierTeamsIncButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+                const current = parseInt(frontierTeamsInput.value, 10) || 0
+                frontierTeamsInput.value = current + 1
+                updateGroupsFromTeamsInput()
+            })
+            frontierTeamsInput.addEventListener('input', updateGroupsFromTeamsInput)
+            frontierTeamsRow.appendChild(frontierTeamsDecButton)
+            frontierTeamsRow.appendChild(frontierTeamsInput)
+            frontierTeamsRow.appendChild(frontierTeamsIncButton)
+            frontierTeamsWrapper.appendChild(frontierTeamsRow)
+            dailyPopup.appendChild(frontierTeamsWrapper)
+
+            // ---------- groups ----------
+            const frontierGroupsHint = 'Shuffling groups. Teams will be shuffled only within specified range (1-4 means two teams will be shuffled within the first 4 teams)'
+            const frontierGroupsWrapper = makeFrontierFieldWrapper()
+            frontierGroupsWrapper.appendChild(makeFrontierLabel('Groups', frontierGroupsHint))
+            const frontierInput = document.createElement('input')
+            frontierInput.type = 'text'
+            frontierInput.title = frontierGroupsHint
+            frontierInput.placeholder = 'e.g. 1-4,5-7,8-9'
+            const storedFrontierGroups = localStorage.getItem(FRONTIER_GROUPS_STORAGE_KEY)
+            frontierInput.value = storedFrontierGroups || computeFrontierGroupsFromTeams(parseInt(frontierTeamsInput.value, 10))
+            Object.assign(frontierInput.style, frontierFieldStyle)
+            frontierGroupsWrapper.appendChild(frontierInput)
+            dailyPopup.appendChild(frontierGroupsWrapper)
 
             function flashInvalidInput(input) {
                 const originalBorder = input.style.border
@@ -981,26 +1114,6 @@
                 }, 1000)
             }
 
-            function parseFrontierGroups(text) {
-                const groups = text.split(',').map(s => s.trim()).filter(s => s.length > 0)
-                if (groups.length === 0) {
-                    return null
-                }
-                const pairs = []
-                for (const group of groups) {
-                    const match = group.match(/^(\d+)(?:-(\d+))?$/)
-                    if (!match) {
-                        return null
-                    }
-                    const start = parseInt(match[1], 10)
-                    const end = match[2] !== undefined ? parseInt(match[2], 10) : start
-                    if (end < start) {
-                        return null
-                    }
-                    pairs.push([start, end])
-                }
-                return pairs
-            }
 
             const frontierStartButton = document.createElement('button')
             frontierStartButton.textContent = 'Start frontier'
@@ -1034,9 +1147,23 @@
                     return
                 }
 
+                const attempts = parseInt(frontierAttemptsInput.value, 10)
+                if (!Number.isInteger(attempts) || attempts < 1) {
+                    flashInvalidInput(frontierAttemptsInput)
+                    return
+                }
+
+                const teams = parseInt(frontierTeamsInput.value, 10)
+                if (!Number.isInteger(teams) || teams < 1) {
+                    flashInvalidInput(frontierTeamsInput)
+                    return
+                }
+
+                storeInt(FRONTIER_ATTEMPTS_STORAGE_KEY, attempts)
+                storeInt(FRONTIER_TEAMS_STORAGE_KEY, teams)
                 localStorage.setItem(FRONTIER_GROUPS_STORAGE_KEY, frontierInput.value)
                 dailyPopup.style.display = 'none'
-                runFrontier(pairs)
+                runFrontier(pairs, attempts, teams)
             })
 
             document.body.appendChild(dailyPopup)
@@ -1755,17 +1882,97 @@
             }
         }
 
-        async function runFrontier(params = []) {
+        async function runFrontier(groups = [], attempts = 3, teams = 10) {
             if (isRunningMacro == MACRO_FRONTIER) {
                 setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
                 await releaseWakeLock()
                 isRunningMacro = null
                 return
             }
+            localStorage.setItem("last_macro", MACRO_FRONTIER)
             setActivated(dailyButton, true, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
             isRunningMacro = MACRO_FRONTIER
             await enableWakeLock()
-            
+
+            gameCanvas.focus()
+            gameArea = gameCanvas.getBoundingClientRect()
+            canvasScaleX = gameCanvas.width / gameArea.width
+            canvasScaleY = gameCanvas.height / gameArea.height
+
+            const yTeam1 = 0.175539
+            const yTeam5 = 0.858066
+            const teamHeight = (yTeam5 - yTeam1)/4
+
+            function delay(ms) {
+                return {actionType: actionDelay, delay: ms}
+            }
+            function swapRandomTeams(tMin = 0, tMax = 3) {
+                const t1 = Math.floor(Math.random() * (tMax - tMin + 1)) + tMin
+                const t2 = Math.floor(Math.random() * (tMax - tMin + 1)) + tMin
+                if (t1 == t2) {
+                    return {actionType: actionDelay, delay: 200}
+                }
+                const y1 = yTeam1 + teamHeight * t1
+                const y2 = yTeam1 + teamHeight * t2
+                return {x: 0.135417, y: y1, altX: 0.135417, altY: y2, delay: 500, actionType: actionDragDrop, title: `swap ${t1+1} with ${t2+1}`}
+            }
+            function scrollDown(scrollTeams = 4) {
+                const y = yTeam1 + teamHeight * scrollTeams
+
+                return {x: 0.5, y: y, altX: 0.5, altY: yTeam1, delay: 400, actionType: actionDragDrop, title: "scroll +4 teams"}
+            }
+            const leaveFrontierLabel = "Leave Frontier"
+            const waitForFrontier = {x: 0.049190, y: 0.434094, actionType: actionWaitForColor, color: [237,209,158], delay: 5000, title: "waiting for frontier"}
+            const clickToBattle = {x: 0.909604, y: 0.888660, delay: 200, actionType: actionClick, title: "click to battle"}
+            const waitForBattlePreparation = {x: 0.841435, y: 0.766195, actionType: actionWaitForColor, color: [65,158,28], delay: 5000, title: "waiting for battle prep."}
+            const clickAutoBattle = {x: 0.893596, y: 0.760824, delay: 200, actionType: actionClick, title: "click auto battle"}
+            const waitForLose = {x: 0.497106, y: 0.251584, actionType: actionWaitForColor, color: [180,14,36], delay: 60000, title: "waiting for lose"}
+            const clickContinue = {x: 0.903013, y: 0.890721, delay: 200, actionType: actionClick, title: "click continue"}
+
+            const clickReorderTeams = {x: 0.782407, y: 0.719899, actionType: actionClick, delay: 300, title: "click reorder teams"}
+            const waitForReorderTeams = {x: 0.499421, y: 0.004436, actionType: actionWaitForColor, color: [3,6,9], delay: 2000, title: "waiting for reorder teams"}
+            const clickCloseReorderTeams = {x: 0.971644, y: 0.052598, actionType: actionClick, delay: 300, title: "close reorder teams"}
+
+            const battleLoop = [waitForBattlePreparation, delay(500), clickAutoBattle, waitForLose, delay(500), clickContinue, waitForFrontier, delay(500), clickToBattle]
+            fromHomePage = false
+            await runActions([
+                {x: 0.464120, y: 0.239544, actionType: actionClick, delay: 500, title: "click frontier"},
+                waitForFrontier, delay(500), clickToBattle
+            ], MACRO_FRONTIER)
+
+            for(let i=0; i<10000; i++) {
+                if (isRunningMacro != MACRO_FRONTIER) break
+                let actions = [clickReorderTeams, waitForReorderTeams]
+                let topIndex = 0
+                let bottomIndex = topIndex + 4
+                do {
+                    bottomIndex = Math.min(topIndex + 4, teams - 1)
+                    for(let g=0; g<groups.length; g++) {
+                        const group = groups[g]
+                        const gStart = group[0] - 1
+                        const gEnd = group[1] - 1
+                        let start = Math.max(topIndex, gStart)
+                        let end = Math.min(bottomIndex, gEnd)
+                        if (start < end) {
+                            actions.push(swapRandomTeams(start - topIndex, end - topIndex))
+                            addError(`swapRandomTeams(${start - topIndex}, ${end - topIndex})`)
+                        }
+                    }
+                    const scrollOffset = Math.min(4, teams - 1 - bottomIndex)
+                    if (scrollOffset > 0) {
+                        actions.push(scrollDown(scrollOffset))
+                        addError(`scrollDown(${scrollOffset})`)
+                        topIndex += scrollOffset
+                    }
+                } while (bottomIndex < teams - 1);
+
+                actions.push(clickCloseReorderTeams)
+                for (let i=0; i<attempts; i++) {
+                    actions.push(...battleLoop)
+                }
+                await runActions(actions, MACRO_FRONTIER)
+            }
+
             setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
             if (isRunningMacro == MACRO_FRONTIER) {
                 await releaseWakeLock()
@@ -2071,7 +2278,8 @@
 
         fromHomePage = true
         if (localStorage.getItem("last_macro") == MACRO_FRONTIER) {
-            await runFrontier([])
+            const groups = parseFrontierGroups(localStorage.getItem(FRONTIER_GROUPS_STORAGE_KEY)) || []
+            await runFrontier(groups, restoreInt(FRONTIER_ATTEMPTS_STORAGE_KEY, 3), restoreInt(FRONTIER_TEAMS_STORAGE_KEY, 10))
         } else {
             await runDungeonMacro()
         }
