@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-18_01:54
+// @version      2026-08-18_09:22
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -116,9 +116,12 @@
         const container = document.getElementById('errorContainer')
         if (!container) return
 
-        const span = document.createElement('span')
-        span.style.display = 'block'
-        span.textContent = msg
+        const now = new Date();
+        const time = now.toTimeString().slice(0, 8);
+
+        const span = document.createElement('div')
+        span.textContent = "[" + time + "] " + msg
+
         container.appendChild(span)
 
         while (container.children.length > 10) {
@@ -684,7 +687,6 @@
                 'expeditions',
                 'hydra',
                 'camps',
-                'rewards',
                 'dungeon'
             ]
             const DAILY_TASKS_STORAGE_KEY = 'dailyTasksParams'
@@ -1262,13 +1264,13 @@
             Object.assign(errorContainerEl.style, {
                 color: 'white',
                 fontSize: '12px',
-                maxHeight: '250px',
+                maxHeight: '500px',
                 overflowY: 'auto',
                 cursor: 'pointer'
             })
             errorContainerEl.title = 'Click to copy all errors to clipboard'
             errorContainerEl.addEventListener('click', () => {
-                const text = Array.from(errorContainerEl.querySelectorAll('span')).map(s => s.textContent).join('\n')
+                const text = Array.from(errorContainerEl.querySelectorAll('div')).map(s => s.textContent).join('\n')
                 navigator.clipboard.writeText(text)
             })
             logsPopup.appendChild(errorContainerEl)
@@ -1278,7 +1280,7 @@
             logsButton.addEventListener('click', (e) => {
                 e.stopPropagation()
 
-                const text = Array.from(errorContainerEl.querySelectorAll('span')).map(s => s.textContent).join('\n')
+                const text = Array.from(errorContainerEl.querySelectorAll('div')).map(s => s.textContent).join('\n')
                 navigator.clipboard.writeText(text)
 
                 if (logsPopup.style.display === 'none') {
@@ -1423,9 +1425,14 @@
                     }
 
                     if (!isOk) {
-                        const error = lvlTitle + ": " + (titanI + 1) + " titan's HP is tooo low (" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + ") at x:" + titanX + " y:" + y
+                        const error = lvlTitle + ": " + (titanI + 1) + " titan's HP is tooo low [" + testPixel[0] + "," + testPixel[1] + "," + testPixel[2] + "] at (" + titanX + "," + y + ")"
                         document.title = error
                         addError(error)
+                        if (isRunningMacro == macro) {
+                            setActivated(dungeonMacroButton, false, BUTTON_TEXT_STOP_DUNGEON, BUTTON_TEXT_RUN_DUNGEON)
+                            isRunningMacro = null
+                            await releaseWakeLock()
+                        }
                         return
                     }
                 } else if (actionType == actionJumpIf) {
@@ -1461,13 +1468,13 @@
                         if (maxDelay <= 0) {
                             if (maxRetries == 0) {
                                 document.title = "failed " + lvlTitle + ": " + title
-                                addError("retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
+                                addError("failed waiting " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
                                 break
                             }
                             // =========== didn't see the required color => try to click again and wait one more time ==========
                             if (retries > 0) {
                                 document.title = "failed " + lvlTitle + ": " + title
-                                addError("retrying click (left:" + retries + ") " + lvlTitle + ": " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
+                                addError("re-clicking (retries:" + retries + ") " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
                                 retries--
                                 maxDelay = MAX_WAIT_BEFORE_RETRY
                                 await runActions([prevClickAction], macro)
@@ -1936,6 +1943,7 @@
             const battleLoop = [waitForBattlePreparation, delay(500), clickAutoBattle, waitForLose, delay(500), clickContinue, waitForFrontier, delay(500), clickToBattle]
             fromHomePage = false
             await runActions([
+                {actionType: actionTitle, title: "Frontier"},
                 {x: 0.464120, y: 0.239544, actionType: actionClick, delay: 500, title: "click frontier"},
                 waitForFrontier, delay(500), clickToBattle
             ], MACRO_FRONTIER)
@@ -2083,6 +2091,7 @@
 
             const closeValkyrieTitle = "Close valkyrie"
             let actions = [
+                {actionType: actionTitle, title: "Expeditions"},
                 {x: 0.29456, y: 0.309252, delay: 1000, actionType: actionClick, title: "Navigate airship"},
                 {x: 0.498264, y: 0.263625, delay: 1000, actionType: actionClick, title: "Click valkyrie"},
                 {x: 0.659722, y: 0.903676, delay: 100, color: [73,158,22], actionType: actionJumpIf, title: closeValkyrieTitle},
@@ -2109,18 +2118,20 @@
         async function runTower(macro = MACRO_DAILY) {
             const leaveTowerTitle = "Leave tower"
             let actions = [
+                {actionType: actionTitle, title: "Tower"},
                 {x: 0.683449, y: 0.309886, actionType: actionClick, delay: 1000, title: "Open tower"},
-                {x: 0.638889, y: 0.731939, actionType: actionJumpIfNot, color: [96, 163, 57], title: leaveTowerTitle},
+                {x: 0.638889, y: 0.731939, actionType: actionJumpIfNot, color: [69, 166, 31], title: leaveTowerTitle, threshold: 20},
                 {x: 0.638889, y: 0.731939, actionType: actionClick, delay: 1000, title: "Open 33 chests for 2k emeralds"},
-                {x: 0.711806, y: 0.900507, actionType: actionWaitForColor, color: [96, 163, 57], delay: 5000},
+                {x: 0.711806, y: 0.900507, actionType: actionWaitForColor, color: [68,165,30], delay: 10000, threshold: 20},
                 {x: 0.971065, y: 0.050063, actionType: actionClick, delay: 1000, title: leaveTowerTitle}
             ]
-            await runActions(actions, macro)
+            await runActions(actions, macro, 0)
         }
 
         async function runHydra(macro = MACRO_DAILY) {
             let closeHydraTitle = "Close castle ruins"
             let actions = [
+                {actionType: actionTitle, title: "Hydra"},
                 {x: 0.333333, y: 0.908112, actionType: actionClick, delay: 2000, title: "Click guild"},
                 {x: 0.553241, y: 0.240177, actionType: actionClick, delay: 2000, title: "Click elemental cradle"},
                 {x: 0.771991, y: 0.366920, actionType: actionClick, delay: 2000, title: "Click castle ruins"},
@@ -2159,6 +2170,7 @@
             ]
 
             let actions = [
+                {actionType: actionTitle, title: "Camps"},
                 {x: 0.17419, y: 0.903676, delay: 3000, actionType: actionClick, title: "Navigate realm"}
             ]
 
@@ -2181,6 +2193,7 @@
             const gotoNextChestTitle = "next chest"
             // heroic chests
             await runActions([
+                {actionType: actionTitle, title: "Chest"},
                 //{x: 0.523148, y: 0.797845, actionType: actionJumpIfNot, color: [196,41,42], title: gotoNextActionTitle},
                 {x: 0.480324, y: 0.711027, actionType: actionClick, delay: 1000, title: "Navigate heroic chest"},
 
@@ -2204,8 +2217,8 @@
         }
 
         async function runRewards(macro = MACRO_DAILY) {
-
             await runActions([
+                {actionType: actionTitle, title: "Rewards"},
                 // collect free energy from shop
                 {x: 0.939815, y: 0.053232, delay: 1000, actionType: actionClick, title: "navigate emeralds"},
                 {x: 0.055, y: 0.10, delay: 500, actionType: actionClick, title: "click 1"},
