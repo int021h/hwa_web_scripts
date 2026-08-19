@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-18_09:22
+// @version      2026-08-20_01:18
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -23,16 +23,16 @@
 
     //initial dungeon delays
     const MAX_FLOORS = 10000
-    const DELAY_AFTER_CLICKING_GUILD = 5000
-    const DELAY_AFTER_CLICKING_DUNGEON = 5000
-    const EXTRA_GATE_DELAY_FIRST_FLOOR = 1000
-    const EXTRA_WALK_DELAY_FIRST_FLOOR = 3000
-    const EXTRA_FLOOR_DELAY_FIRST_FLOOR = 5000
+    const DELAY_AFTER_CLICKING_GUILD = 1000
+    const DELAY_AFTER_CLICKING_DUNGEON = 1000
+    const EXTRA_GATE_DELAY_FIRST_FLOOR = 0
+    const EXTRA_WALK_DELAY_FIRST_FLOOR = 2000
+    const EXTRA_FLOOR_DELAY_FIRST_FLOOR = 3000
 
     const EXTRA_DELAY_BEFORE_CONFIRM_BATTLE = 0
 
     // dungeon delays
-    const DELAY_FOR_TITANS_WALK = 1000 // after battle results confirmed titans walk to another lvl
+    const DELAY_FOR_TITANS_WALK = 500 // after battle results confirmed titans walk to another lvl
     const DELAY_AFTER_CLICKING_AUTOBATTLE = 500 // minimum duration of the battle
     const DELAY_AFTER_GATE_CLICKED = 500 // delay after clicking on lvl gate, before rooms selection popup appeared
     const DELAY_AFTER_ROOM_CLICKED = 500 // delay between choosing the room and opening the battlefield
@@ -1236,8 +1236,8 @@
                 position: 'fixed',
                 display: 'none',
                 zIndex: '9999999',
-                minWidth: '300px',
-                maxWidth: '400px',
+                minWidth: '400px',
+                maxWidth: '600px',
                 padding: '12px',
                 border: '1px solid rgba(120,180,255,0.5)',
                 borderRadius: '10px',
@@ -1258,6 +1258,35 @@
                 textAlign: 'center'
             })
             logsPopup.appendChild(logsTitle)
+
+            const copyErrorsButton = document.createElement('button')
+            copyErrorsButton.textContent = 'Copy 📋'
+            Object.assign(copyErrorsButton.style, {
+                width: '100%',
+                background: 'linear-gradient(180deg, #8bd0ff 0%, #2f7fc4 55%, #1a4f80 100%)',
+                color: '#eef7ff',
+                border: '1px solid #7ec8f2',
+                borderRadius: '8px',
+                padding: '4px 12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                textShadow: '0 1px 2px rgba(0,0,0,0.7)',
+                boxShadow: '0 0 10px rgba(80,180,255,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+                transition: '0.15s ease',
+                marginBottom: '8px'
+            })
+            copyErrorsButton.onmouseenter = () => {
+                copyErrorsButton.style.filter = 'brightness(1.12)'
+            }
+            copyErrorsButton.onmouseleave = () => {
+                copyErrorsButton.style.filter = 'brightness(1)'
+            }
+            copyErrorsButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+                const text = Array.from(errorContainerEl.querySelectorAll('div')).map(s => s.textContent).join('\n')
+                navigator.clipboard.writeText(text)
+            })
+            logsPopup.appendChild(copyErrorsButton)
 
             const errorContainerEl = document.createElement('div')
             errorContainerEl.id = 'errorContainer'
@@ -1340,6 +1369,7 @@
                     altY = 0,
                     delay = 0,
                     title = "",
+                    jumpTitle = title,
                     threshold = COLORS_MATCH_THRESHOLD,
                     actionType = actionClick
                 } = action
@@ -1392,7 +1422,6 @@
                         }
 
                         if (isOk) {
-                            addError("HP check succeeded for " + hp.length + " titans")
                             break
                         }
                     }
@@ -1418,7 +1447,6 @@
                             }
 
                             if (isOk) {
-                                addError("HP check succeeded for " + hp.length + " titans")
                                 break
                             }
                         }
@@ -1432,6 +1460,9 @@
                             setActivated(dungeonMacroButton, false, BUTTON_TEXT_STOP_DUNGEON, BUTTON_TEXT_RUN_DUNGEON)
                             isRunningMacro = null
                             await releaseWakeLock()
+
+                            localStorage.setItem("last_macro", MACRO_FRONTIER)
+                            location.reload()
                         }
                         return
                     }
@@ -1442,8 +1473,8 @@
                     )
 
                     if (colorsAreSame(testPixel, color, threshold)) {
-                        skipUntilAction = title
-                        document.title = "Jump detected: " + title
+                        skipUntilAction = jumpTitle
+                        document.title = "Jump detected: " + jumpTitle
                         //console.log("Room detected. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
                     }
                 } else if (actionType == actionJumpIfNot) {
@@ -1452,8 +1483,8 @@
                         gameArea.height * y * canvasScaleY,
                     )
                     if (!colorsAreSame(testPixel, color, threshold)) {
-                        skipUntilAction = title
-                        document.title = "Jump detected: " + title
+                        skipUntilAction = jumpTitle
+                        document.title = "Jump detected: " + jumpTitle
                         //console.log("Conditional jump. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "==", color[0], color[1], color[2])
                     }
                 } else if (actionType == actionWaitForColor) {
@@ -1783,8 +1814,9 @@
             const gateLeft = {x: 0.312, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "clicking on left gate"}
 
             // ======= dungeon elemental rooms =======
-            const waitFor1RoomSelection = {x: 0.69969666, y: 0.8506637, color: [17,12,6], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for single room selection popup"}
-            const waitFor2RoomSelection = {x: 0.5, y: 0.5, color: [19,17,7], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for double room selection popup"}
+            const roomSelectionTitle = "waiting for room selection popup"
+            const waitFor1RoomSelection = {x: 0.69969666, y: 0.8506637, actionType: actionWaitForColor, color: [17,12,6], delay: DELAY_CHECK_CYCLE, title: roomSelectionTitle}
+            const waitFor2RoomSelection = {x: 0.5, y: 0.5, color: [19,17,7], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: roomSelectionTitle}
             const roomMid = {x: 0.5, y: 0.795, delay: DELAY_AFTER_ROOM_CLICKED, actionType: actionClick, title: "clicking on mid room"}
 
             //  ======= usage: checkRoomColors, roomLeft, roomRight =======
@@ -1804,7 +1836,7 @@
                 checkHP = {x: 0, xx: titansHP, y: 0.461, color: [56,199,28], actionType: actionInterruptIfNotColor, title: "Check titans HP", threshold: 20}
             }
 
-            const confirmBattle = {x: 0.641372, y: 0.822323, delay: DELAY_FOR_TITANS_WALK, actionType: actionClick, title: "clicking on confirm battle result"}
+            const confirmBattle = {x: 0.641372, y: 0.822323, delay: 0, actionType: actionClick, title: "clicking on confirm battle result"}
 
             // ======= dungeon floor finished symbol =======
             const waitForFloor1Done = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for floor1 final scene"}
@@ -1816,8 +1848,25 @@
 
             // ======= dungeon floor finished popup ========
             const waitForFloorConfirm = {x: 0.5, y: 0.5, color: [22,12,8], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for floor confirmation popup"}
-            const floorConfirm = {x: 0.635, y: 0.697, delay: DELAY_AFTER_FINISHING_FLOOR, actionType: actionClick, title: "clicking on floor confirmation popup"}
+            const floorConfirm = {x: 0.635, y: 0.697, delay: 0, actionType: actionClick, title: "clicking on floor confirmation popup"}
 
+
+            // ======= speed up titan walk =========
+            const fastRightGateTitle = "Fast right gate"
+            let fastRightGateActions = [{x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50}]
+            for (let i=0; i<10; i++) {
+                fastRightGateActions.push({x: 0.495370, y: 0.889734, actionType: actionJumpIf, color: [18,15,4], threshold: 5, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
+                fastRightGateActions.push({x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50})
+            }
+
+            const fastLeftGateTitle = "Fast left gate"
+            let fastLeftGateActions = [{x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50}]
+            for (let i=0; i<10; i++) {
+                fastLeftGateActions.push({x: 0.495370, y: 0.889734, actionType: actionJumpIf, color: [18,15,4], threshold: 5, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
+                fastLeftGateActions.push({x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50})
+            }
+
+            // ======== screen detection for the first floor =========
             const jumpToRightGate = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateRight.title}
             const jumpToMidGate = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateMid.title}
             const jumpToLeftGate = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateLeft.title}
@@ -1838,7 +1887,7 @@
             }
 
             const confirmBattleDelay = {actionType: actionDelay, delay: EXTRA_DELAY_BEFORE_CONFIRM_BATTLE, title: "Waiting for confirm battle"}
-            const battleActions = [waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattleDelay, confirmBattle]
+            const battleActions = [waitForBattlefield, autoBattle, waitForConfirmBattle, checkHP, confirmBattleDelay, confirmBattle, delay(DELAY_FOR_TITANS_WALK)]
             const initialFloorRooms = [checkRoomColors, roomLeft, roomRight, roomMid]
 
             await runActions([
@@ -1853,7 +1902,7 @@
                 jumpToLeftGate, jumpToRightGate,
                 gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToFloor1, jumpToMidGate,
-                floor1Done, waitForFloorConfirm, floorConfirm, delay(EXTRA_FLOOR_DELAY_FIRST_FLOOR),
+                floor1Done, waitForFloorConfirm, floorConfirm, delay(DELAY_AFTER_FINISHING_FLOOR), delay(EXTRA_FLOOR_DELAY_FIRST_FLOOR),
                 gateLeft, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 jumpToMidGate, jumpToRightGate,
@@ -1861,24 +1910,24 @@
                 jumpToMidGate, jumpToRightGate,
                 gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                 gateRight, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
-                floor2Done, waitForFloorConfirm, floorConfirm, delay(EXTRA_FLOOR_DELAY_FIRST_FLOOR),
+                floor2Done, waitForFloorConfirm, floorConfirm, delay(500),
             ], MACRO_DUNGEON)
 
             for (let i = 0; i < floors; i++) {
                 if (isRunningMacro != MACRO_DUNGEON) break
                 await runActions([
-                    title("lvl1"), waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl2"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl3"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl4"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl5"), delay(1000), waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm,
-                    title("lvl6"), waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl7"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl8"), waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl9"), waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl0"), waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("floor2"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
+                    title("lvl1"), ...fastRightGateActions, waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl2"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl3"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl4"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl5"), ...fastRightGateActions, waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm, delay(500),
+                    title("lvl6"), ...fastLeftGateActions, waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl7"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl8"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl9"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl0"), ...fastLeftGateActions, waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("floor2"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm, delay(500),
                 ], MACRO_DUNGEON)
             }
 
@@ -2155,15 +2204,23 @@
 
         async function runCamps(macro = MACRO_DAILY) {
             const titleLeaveRealm = "Leave realm"
+            const titleAttackCamp = "Attack camp sword"
+            const titleAttackCampBut = "Attack camp button"
+            const titleStartBattle = "Start battle"
             const campActions = [
                 {x: 0.877894, y: 0.753485, actionType: actionClick, delay: 1000, title: "Search icon"},
                 {x: 0.768519, y: 0.207858, actionType: actionClick, delay: 1000, title: "Camps icon"},
                 {x: 0.853588, y: 0.903676, actionType: actionClick, delay: 1000, title: "Search camp"},
                 {x: 0.659722, y: 0.493663, actionType: actionWaitForColor, delay: 5000, color: [255,253,239], title: "waiting for camp"},
-                {x: 0.659722, y: 0.493663, actionType: actionJumpIfNot, color: [255,253,239], title: titleLeaveRealm},
 
-                {x: 0.657986, y: 0.490494, actionType: actionClick, delay: 1000, title: "Attack camp"},
-                {x: 0.886574, y: 0.894804, actionType: actionClick, delay: 5000, title: "Start battle"},
+                {x: 0.659722, y: 0.493663, actionType: actionJumpIfNot, color: [255,253,239], title: titleAttackCampBut}, // check if there is white Attack button with swords
+                {x: 0.657986, y: 0.490494, actionType: actionClick, delay: 1000, title: titleAttackCamp},
+                {x: 0.500000, y: 0.500000, actionType: actionJumpIfNot, color: [0,0,0], title: titleStartBattle, treshold: 1},
+
+                {x: 0.460648, y: 0.756654, actionType: actionJumpIfNot, color: [56,146,0], title: titleLeaveRealm}, // check if there is green Attack button in popup
+                {x: 0.460648, y: 0.756654, actionType: actionClick, delay: 1000, title: titleAttackCamp},
+
+                {x: 0.886574, y: 0.894804, actionType: actionClick, delay: 5000, title: titleStartBattle},
                 {x: 0.860532, y: 0.867554, actionType: actionWaitForColor, delay: 60000, color: [92,192,35], title: "Waiting until battle ends...", threshold: 30},
                 {actionType: actionDelay, delay: 500},
                 {x: 0.914931, y: 0.893536, actionType: actionClick, delay: 5000, title: "confirm battle"}
