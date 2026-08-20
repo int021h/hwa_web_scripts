@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-20_02:44
+// @version      2026-08-20_03:10
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -1344,6 +1344,7 @@
             setActivated(dungeonMacroButton, false, BUTTON_TEXT_STOP_DUNGEON, BUTTON_TEXT_RUN_DUNGEON)
         }
 
+        let lastPixel = [0,0,0]
         /// MACRO RUNNER
         async function runActions(actions, macro = MACRO_DUNGEON, maxRetries = MAX_RETRIES) {
             const target = gameCanvas
@@ -1474,8 +1475,11 @@
 
                     if (colorsAreSame(testPixel, color, threshold)) {
                         skipUntilAction = jumpTitle
-                        document.title = "Jump detected: " + jumpTitle
+                        addError("Detected: " + jumpTitle + " [" + testPixel[0] + ',' + testPixel[1] + ',' + testPixel[2] + '] == [' + color[0] + ',' + color[1] + ',' + color[2] + ']')
+                        //document.title = "Jump detected: " + jumpTitle
                         //console.log("Room detected. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "!=", color[0], color[1], color[2])
+                    } else {
+                        lastPixel = testPixel
                     }
                 } else if (actionType == actionJumpIfNot) {
                     let testPixel = await readPixelOnDraw(
@@ -1484,7 +1488,7 @@
                     )
                     if (!colorsAreSame(testPixel, color, threshold)) {
                         skipUntilAction = jumpTitle
-                        document.title = "Jump detected: " + jumpTitle
+                        //document.title = "Jump detected: " + jumpTitle
                         //console.log("Conditional jump. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "==", color[0], color[1], color[2])
                     }
                 } else if (actionType == actionWaitForColor) {
@@ -1505,6 +1509,7 @@
                             // =========== didn't see the required color => try to click again and wait one more time ==========
                             if (retries > 0) {
                                 document.title = "failed " + lvlTitle + ": " + title
+                                addError("popup detection: [" + lastPixel[0] + "," + lastPixel[1] + "," + lastPixel[2] + "]")
                                 addError("re-clicking (retries:" + retries + ") " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
                                 retries--
                                 maxDelay = MAX_WAIT_BEFORE_RETRY
