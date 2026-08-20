@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-20_01:18
+// @version      2026-08-20_02:44
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -1855,14 +1855,14 @@
             const fastRightGateTitle = "Fast right gate"
             let fastRightGateActions = [{x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
-                fastRightGateActions.push({x: 0.495370, y: 0.889734, actionType: actionJumpIf, color: [18,15,4], threshold: 5, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
+                fastRightGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [28,21,4], threshold: 10, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
                 fastRightGateActions.push({x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50})
             }
 
             const fastLeftGateTitle = "Fast left gate"
             let fastLeftGateActions = [{x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
-                fastLeftGateActions.push({x: 0.495370, y: 0.889734, actionType: actionJumpIf, color: [18,15,4], threshold: 5, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
+                fastLeftGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [28,21,4], threshold: 10, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
                 fastLeftGateActions.push({x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50})
             }
 
