@@ -1860,14 +1860,14 @@
             const fastRightGateTitle = "Fast right gate"
             let fastRightGateActions = [{x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
-                fastRightGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [28,21,4], threshold: 10, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
+                fastRightGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
                 fastRightGateActions.push({x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50})
             }
 
             const fastLeftGateTitle = "Fast left gate"
             let fastLeftGateActions = [{x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
-                fastLeftGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [28,21,4], threshold: 10, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
+                fastLeftGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
                 fastLeftGateActions.push({x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50})
             }
 
