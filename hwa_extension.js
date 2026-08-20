@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-20_03:25
+// @version      2026-08-20_21:43
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -14,17 +14,19 @@
 
     /// ======== OPTIONS ==========
 
-    const GAME_LOAD_TIMEOUT = 20000; // script starts in 20 seconds after the page is loaded
+    const WARDEN = false
 
-    const DELAY_CHECK_CYCLE = 500 // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
+    const GAME_LOAD_TIMEOUT = 3000; // script starts in 20 seconds after the page is loaded
+
+    const DELAY_CHECK_CYCLE = 5000 // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
     const MAX_WAIT_BEFORE_RETRY = 5000 // max waiting time for a new screen to appear
     const MAX_RETRIES = 3 // after 3 retries if screen didn't appear => page will be reloaded and script restarts
     const RELOAD_PAGE_ON_FAILURE = true //
 
     //initial dungeon delays
     const MAX_FLOORS = 10000
-    const DELAY_AFTER_CLICKING_GUILD = 1000
-    const DELAY_AFTER_CLICKING_DUNGEON = 1000
+    const DELAY_AFTER_CLICKING_GUILD = 5000
+    const DELAY_AFTER_CLICKING_DUNGEON = 5000
     const EXTRA_GATE_DELAY_FIRST_FLOOR = 0
     const EXTRA_WALK_DELAY_FIRST_FLOOR = 2000
     const EXTRA_FLOOR_DELAY_FIRST_FLOOR = 3000
@@ -35,7 +37,7 @@
     const DELAY_FOR_TITANS_WALK = 500 // after battle results confirmed titans walk to another lvl
     const DELAY_AFTER_CLICKING_AUTOBATTLE = 500 // minimum duration of the battle
     const DELAY_AFTER_GATE_CLICKED = 500 // delay after clicking on lvl gate, before rooms selection popup appeared
-    const DELAY_AFTER_ROOM_CLICKED = 500 // delay between choosing the room and opening the battlefield
+    const DELAY_AFTER_ROOM_CLICKED = 0 // delay between choosing the room and opening the battlefield
     const DELAY_AFTER_CLICKING_FLOOR_REWARD = 1000 // click on shield at the end of the floor on lvl5 or lvl10
     const DELAY_AFTER_FINISHING_FLOOR = 4000 // click on accept gold for the floor, titans slowly walk to the next floor
 
@@ -83,8 +85,9 @@
     // actions with some logic
     const actionChooseRoom = 21
     const actionWaitForColor = 22
-    const actionInterruptIfColor = 23
-    const actionInterruptIfNotColor = 24
+    const actionWaitForColorNot = 23
+    const actionInterruptIfColor = 24
+    const actionInterruptIfNotColor = 25
 
     // ========= CRASH HANDLERS =========
 
@@ -1327,6 +1330,17 @@
                 }
             })
 
+            if (WARDEN) {
+                if (chrome && crome.runtime) {
+                    const iconUrl = chrome.runtime.getURL('icons/icon-48.png')
+                    const img = document.createElement('img')
+                    img.src = iconUrl
+                    img.style.width = '26px'
+                    img.style.height = '26px'
+                    container.appendChild(img)
+                }
+            }
+
             container.appendChild(document.createTextNode('Priority:'))
             container.appendChild(elements)
             container.appendChild(document.createTextNode('Delays:'))
@@ -1490,6 +1504,26 @@
                         skipUntilAction = jumpTitle
                         //document.title = "Jump detected: " + jumpTitle
                         //console.log("Conditional jump. Next action is:", title, " // ", testPixel[0], testPixel[1], testPixel[2], "==", color[0], color[1], color[2])
+                    }
+                } else if (actionType == actionWaitForColorNot) {
+                    let maxDelay = delay
+                    let pixel = await readPixelOnDraw((gameArea.width * x) * canvasScaleX, (gameArea.height * y) * canvasScaleY)
+
+                    do {
+                        pixel = await readPixelOnDraw((gameArea.width * x) * canvasScaleX, (gameArea.height * y) * canvasScaleY)
+                        if (!colorsAreSame(pixel, color, threshold)) {
+                            break
+                        }
+                        await sleep(100, macro)
+                        maxDelay -= 100
+                        if (isRunningMacro != macro) return
+                    } while (maxDelay > 0);
+
+                    if (colorsAreSame(pixel, color, threshold)) {
+                        document.title = "failed " + lvlTitle + ": " + title
+                        addError("failed waiting " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
+                        location.reload()
+                        break
                     }
                 } else if (actionType == actionWaitForColor) {
                     let retries = maxRetries
@@ -1878,17 +1912,31 @@
             const jumpToFloor1 = {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: floor1Done.title}
             const jumpToFloor2 = {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: floor2Done.title}
 
+
             if (fromHomePage) {
-                // ========== initial game screen =============
                 fromHomePage = false
-                const waitForHomeTitle = "checking if we are still on home screen"
+
+                // ========== initial game screen =============
+                const waitForHomeTitle = "Waiting for home screen"
+                const clickOnGuildTitle = "Click on guild"
+
+                const checkHomePopup = {x: 0.971644, y: 0.054499, actionType: actionJumpIfNot, color: [245,209,117], title: waitForHomeTitle}
+                const closeHomePopup = {x: 0.971644, y: 0.054499, actionType: actionClick, title: "closing popup", delay: 1000}
+
                 await runActions([
-                    {x: 0.971644, y: 0.054499, actionType: actionJumpIfNot, color: [245,209,117], title: waitForHomeTitle},
-                    {x: 0.971644, y: 0.054499, actionType: actionClick, title: "closing popup", delay: 1000},
-                    {x: 0.992477, y: 0.016477, actionType: actionWaitForColor, color: [156,201,238], delay: DELAY_CHECK_CYCLE, title: waitForHomeTitle},
-                    {x: 0.332755, y: 0.910013, actionType: actionClick, delay: DELAY_AFTER_CLICKING_GUILD, "title": "click on guild"},
+                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
+                    {x: 0.334182, y: 0.907063, actionType: actionJumpIf, color: [235,236,198], delay: 5000, title: waitForHomeTitle, jumpTitle: clickOnGuildTitle},
+                    checkHomePopup,
+                    closeHomePopup,
+                    checkHomePopup,
+                    closeHomePopup,
+                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
+                    delay(2000),
+                    {x: 0.332755, y: 0.910013, actionType: actionClick, "title": clickOnGuildTitle},
+                    {x: 0.197625, y: 0.609665, actionType: actionWaitForColor, color:[72,39,0], delay: DELAY_AFTER_CLICKING_GUILD, title: "Waiting for guild screen"},
+                    delay(2000),
                     {x: 0.241220, y: 0.480769, actionType: actionClick, delay: DELAY_AFTER_CLICKING_DUNGEON, "title": "click on dungeon"},
-                ], MACRO_DUNGEON)
+                ], MACRO_DUNGEON, 0)
             }
 
             const confirmBattleDelay = {actionType: actionDelay, delay: EXTRA_DELAY_BEFORE_CONFIRM_BATTLE, title: "Waiting for confirm battle"}
@@ -1995,7 +2043,29 @@
             const clickCloseReorderTeams = {x: 0.971644, y: 0.052598, actionType: actionClick, delay: 300, title: "close reorder teams"}
 
             const battleLoop = [waitForBattlePreparation, delay(500), clickAutoBattle, waitForLose, delay(500), clickContinue, waitForFrontier, delay(500), clickToBattle]
-            fromHomePage = false
+
+            if (fromHomePage) {
+                fromHomePage = false
+
+                // ========== initial game screen =============
+                const waitForHomeTitle = "Waiting for home screen"
+                const clickOnGuildTitle = "Click on guild"
+
+                const checkHomePopup = {x: 0.971644, y: 0.054499, actionType: actionJumpIfNot, color: [245,209,117], title: waitForHomeTitle}
+                const closeHomePopup = {x: 0.971644, y: 0.054499, actionType: actionClick, title: "closing popup", delay: 1000}
+
+                await runActions([
+                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
+                    {x: 0.334182, y: 0.907063, actionType: actionJumpIf, color: [235,236,198], delay: 5000, title: waitForHomeTitle, jumpTitle: clickOnGuildTitle},
+                    checkHomePopup,
+                    closeHomePopup,
+                    checkHomePopup,
+                    closeHomePopup,
+                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
+                    delay(2000),
+                ], MACRO_DUNGEON, 0)
+            }
+
             await runActions([
                 {actionType: actionTitle, title: "Frontier"},
                 {x: 0.464120, y: 0.239544, actionType: actionClick, delay: 500, title: "click frontier"},
