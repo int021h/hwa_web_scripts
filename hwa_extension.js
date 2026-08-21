@@ -16,7 +16,7 @@
 
     const WARDEN = false
 
-    const GAME_LOAD_TIMEOUT = 3000; // script starts in 20 seconds after the page is loaded
+    const GAME_LOAD_TIMEOUT = 10000; // script starts in 20 seconds after the page is loaded
 
     const DELAY_CHECK_CYCLE = 5000 // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
     const MAX_WAIT_BEFORE_RETRY = 5000 // max waiting time for a new screen to appear
