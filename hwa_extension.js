@@ -1910,28 +1910,13 @@
                 fastRightGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
                 fastRightGateActions.push({x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50})
             }
-
-            const fast6thGateTitle = "Fast 6th gate"
-            let fast6thGateActions = [{x: 0.005370, y: 0.609100, actionType: actionClick, delay: 50}]
-            for (let i=0; i<10; i++) {
-                fast6thGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fast6thGateTitle, jumpTitle: roomSelectionTitle})
-                fast6thGateActions.push({x: 0.005370, y: 0.609100, actionType: actionClick, delay: 50})
-            }
-
+            
             const fastLeftGateTitle = "Fast left gate"
             let fastLeftGateActions = [{x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
                 fastLeftGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
                 fastLeftGateActions.push({x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50})
             }
-
-            const fast1stGateTitle = "Fast 1st gate"
-            let fast1stGateActions = [{x: 0.995370, y: 0.600000, actionType: actionClick, delay: 50}]
-            for (let i=0; i<10; i++) {
-                fast1stGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fast1stGateTitle, jumpTitle: roomSelectionTitle})
-                fast1stGateActions.push({x: 0.995370, y: 0.600000, actionType: actionClick, delay: 50})
-            }
-
 
             // ======== screen detection for the first floor =========
             const jumpToRightGate = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateRight.title}
@@ -2000,13 +1985,13 @@
             for (let i = 0; i < floors; i++) {
                 if (isRunningMacro != MACRO_DUNGEON) break
                 await runActions([
-                    title("lvl1"), ...fast1stGateActions, waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl1"), ...fastRightGateActions, waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
                     title("lvl2"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl3"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl4"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
                     title("lvl5"), ...fastRightGateActions, waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm, delay(500),
-                    title("lvl6"), ...fast6thGateActions, waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl6"), ...fastLeftGateActions, waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
                     title("lvl7"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl8"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl9"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
