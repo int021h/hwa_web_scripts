@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-20_21:43
+// @version      2026-08-22_19:57
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -14,9 +14,7 @@
 
     /// ======== OPTIONS ==========
 
-    const WARDEN = false
-
-    const GAME_LOAD_TIMEOUT = 10000; // script starts in 20 seconds after the page is loaded
+    const GAME_LOAD_TIMEOUT = 10000; // Time required for the game to initialize
 
     const DELAY_CHECK_CYCLE = 5000 // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
     const MAX_WAIT_BEFORE_RETRY = 5000 // max waiting time for a new screen to appear
@@ -61,8 +59,6 @@
     const MACRO_DUNGEON = 'dungeon'
     const MACRO_DAILY = 'daily'
     const MACRO_FRONTIER = 'frontier'
-    const MACRO_CUSTOM = 'custom'
-    const MACRO_BUY_ITEMS = 'buy_items'
     const MACRO_REPEAT_CLICK = 'repeat_click'
 
     const DEFAULT_ORDER = [
@@ -71,6 +67,8 @@
         { id: 'earth', label: '🍀', color: '#4CAF50', dColor: '#265828', bColor: '#265828' },
         { id: 'fire', label: '🔥', color: '#F44336', dColor: '#7A211B', bColor: '#7A211B' },
     ]
+
+    const WARDEN = false
 
     // service actions
     const actionTitle = 1
@@ -90,7 +88,6 @@
     const actionInterruptIfNotColor = 25
 
     // ========= CRASH HANDLERS =========
-
     // ----------------------- mmoebius
     // ugly workaround to check if errors occured
     // hwa displays an exception popup (class = 'error-card') in client if an error occures
@@ -112,9 +109,28 @@
         };
     }
     checkError();
-    // -----------------------
 
-    // keeps the last 10 errors as separate spans inside #errorContainer instead of overwriting it
+    function processRequest(call) {
+        addError('Captured:' + JSON.stringify(call));
+    }
+
+    const ALLOWED_METHODS = new Set(['eternalStory_getState', 'dungeonGetInfo'])
+    window.addEventListener('message', (event) => {
+        if (
+            event.source === window &&
+            event.data?.source === 'hw-ext' &&
+            event.data?.type === 'rpc-capture'
+        ) {
+            const payload = event.data.payload;
+            for (const c of payload.calls) {
+                if (ALLOWED_METHODS.has(c.method)) {
+                    processRequest(c)
+                }
+            }
+        }
+    });
+
+    // keeps the last 10 errors as separate spans inside #errorContainer
     function addError(msg) {
         const container = document.getElementById('errorContainer')
         if (!container) return
@@ -315,6 +331,7 @@
         const FRONTIER_GROUPS_STORAGE_KEY = 'frontierGroups'
 
         function parseFrontierGroups(text) {
+            if (text === null) return null
             const groups = text.split(',').map(s => s.trim()).filter(s => s.length > 0)
             if (groups.length === 0) {
                 return null
@@ -472,11 +489,7 @@
             customButton.onmouseleave = () => {
                 customButton.style.filter = 'brightness(1)'
             }
-            //customButton.addEventListener('click', runCustomMacro)
             customButton.addEventListener('click', toggleDebug)
-            //customButton.addEventListener('click', spendOutlandCoins)
-            //customButton.addEventListener('click', runFrontier)
-
 
             //// =========== ELEMENTS PRIORITY =========== ////
             const STORAGE_KEY = 'elements_priority'
@@ -1331,7 +1344,7 @@
             })
 
             if (WARDEN) {
-                if (chrome && crome.runtime) {
+                if (chrome && chrome.runtime) {
                     const iconUrl = chrome.runtime.getURL('icons/icon-48.png')
                     const img = document.createElement('img')
                     img.src = iconUrl
@@ -1898,12 +1911,27 @@
                 fastRightGateActions.push({x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50})
             }
 
+            const fast6thGateTitle = "Fast 6th gate"
+            let fast6thGateActions = [{x: 0.005370, y: 0.609100, actionType: actionClick, delay: 50}]
+            for (let i=0; i<10; i++) {
+                fast6thGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fast6thGateTitle, jumpTitle: roomSelectionTitle})
+                fast6thGateActions.push({x: 0.005370, y: 0.609100, actionType: actionClick, delay: 50})
+            }
+
             const fastLeftGateTitle = "Fast left gate"
             let fastLeftGateActions = [{x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
                 fastLeftGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
                 fastLeftGateActions.push({x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50})
             }
+
+            const fast1stGateTitle = "Fast 1st gate"
+            let fast1stGateActions = [{x: 0.995370, y: 0.600000, actionType: actionClick, delay: 50}]
+            for (let i=0; i<10; i++) {
+                fast1stGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fast1stGateTitle, jumpTitle: roomSelectionTitle})
+                fast1stGateActions.push({x: 0.995370, y: 0.600000, actionType: actionClick, delay: 50})
+            }
+
 
             // ======== screen detection for the first floor =========
             const jumpToRightGate = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: DELAY_CHECK_CYCLE, actionType: actionJumpIf, title: gateRight.title}
@@ -1931,12 +1959,15 @@
                     checkHomePopup,
                     closeHomePopup,
                     {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
-                    delay(2000),
-                    {x: 0.332755, y: 0.910013, actionType: actionClick, "title": clickOnGuildTitle},
-                    {x: 0.197625, y: 0.609665, actionType: actionWaitForColor, color:[72,39,0], delay: DELAY_AFTER_CLICKING_GUILD, title: "Waiting for guild screen"},
-                    delay(2000),
-                    {x: 0.241220, y: 0.480769, actionType: actionClick, delay: DELAY_AFTER_CLICKING_DUNGEON, "title": "click on dungeon"},
+                    {actionType: actionDelay, delay: 2000, title: clickOnGuildTitle}
                 ], MACRO_DUNGEON, 0)
+
+                await runActions([
+                    {x: 0.332755, y: 0.910013, actionType: actionClick, title: clickOnGuildTitle},
+                    {x: 0.273832, y: 0.612474, actionType: actionWaitForColor, color:[72,39,0], delay: DELAY_AFTER_CLICKING_GUILD, title: "Waiting for guild screen"},
+                    delay(2000),
+                    {x: 0.241220, y: 0.480769, actionType: actionClick, delay: DELAY_AFTER_CLICKING_DUNGEON, title: "click on dungeon"}
+                ], MACRO_DUNGEON, 2)
             }
 
             const confirmBattleDelay = {actionType: actionDelay, delay: EXTRA_DELAY_BEFORE_CONFIRM_BATTLE, title: "Waiting for confirm battle"}
@@ -1969,13 +2000,13 @@
             for (let i = 0; i < floors; i++) {
                 if (isRunningMacro != MACRO_DUNGEON) break
                 await runActions([
-                    title("lvl1"), ...fastRightGateActions, waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl1"), ...fast1stGateActions, waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
                     title("lvl2"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl3"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl4"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
                     title("lvl5"), ...fastRightGateActions, waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm, delay(500),
-                    title("lvl6"), ...fastLeftGateActions, waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl6"), ...fast6thGateActions, waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
                     title("lvl7"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl8"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("lvl9"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
@@ -2023,12 +2054,12 @@
                 }
                 const y1 = yTeam1 + teamHeight * t1
                 const y2 = yTeam1 + teamHeight * t2
-                return {x: 0.135417, y: y1, altX: 0.135417, altY: y2, delay: 500, actionType: actionDragDrop, title: `swap ${t1+1} with ${t2+1}`}
+                return {x: 0.135417, y: y1, altX: 0.135417, altY: y2, delay: 100, actionType: actionDragDrop, title: `swap ${t1+1} with ${t2+1}`}
             }
             function scrollDown(scrollTeams = 4) {
                 const y = yTeam1 + teamHeight * scrollTeams
 
-                return {x: 0.5, y: y, altX: 0.5, altY: yTeam1, delay: 400, actionType: actionDragDrop, title: "scroll +4 teams"}
+                return {x: 0.5, y: y, altX: 0.5, altY: yTeam1, delay: 100, actionType: actionDragDrop, title: "scroll +4 teams"}
             }
             const leaveFrontierLabel = "Leave Frontier"
             const waitForFrontier = {x: 0.049190, y: 0.434094, actionType: actionWaitForColor, color: [237,209,158], delay: 5000, title: "waiting for frontier"}
@@ -2068,13 +2099,19 @@
 
             await runActions([
                 {actionType: actionTitle, title: "Frontier"},
-                {x: 0.464120, y: 0.239544, actionType: actionClick, delay: 500, title: "click frontier"},
+                {x: 0.464120, y: 0.239544, actionType: actionClick, delay: 500, title: "Click frontier"},
                 waitForFrontier, delay(500), clickToBattle
             ], MACRO_FRONTIER)
 
             for(let i=0; i<10000; i++) {
                 if (isRunningMacro != MACRO_FRONTIER) break
-                let actions = [clickReorderTeams, waitForReorderTeams]
+                let actions = []
+                for (let i=0; i<attempts; i++) {
+                    actions.push(...battleLoop)
+                }
+                actions.push(clickReorderTeams)
+                actions.push(waitForReorderTeams)
+
                 let topIndex = 0
                 let bottomIndex = topIndex + 4
                 do {
@@ -2099,91 +2136,12 @@
                 } while (bottomIndex < teams - 1);
 
                 actions.push(clickCloseReorderTeams)
-                for (let i=0; i<attempts; i++) {
-                    actions.push(...battleLoop)
-                }
+
                 await runActions(actions, MACRO_FRONTIER)
             }
 
             setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
             if (isRunningMacro == MACRO_FRONTIER) {
-                await releaseWakeLock()
-                isRunningMacro = null
-            }
-        }
-
-        async function runCustomMacro() {
-            if (isRunningMacro == MACRO_CUSTOM) {
-                await releaseWakeLock()
-                isRunningMacro = null
-                return
-            }
-            isRunningMacro = MACRO_CUSTOM
-            await enableWakeLock()
-            gameArea = gameCanvas.getBoundingClientRect()
-            canvasScaleX = gameCanvas.width / gameArea.width
-            canvasScaleY = gameCanvas.height / gameArea.height
-
-            function delay(msec) {
-                return {x: 2, y: 2, delay: msec, actionType: actionDelay}
-            }
-
-            const clickBuyTitanPotion = {x: 0.423, y: 0.808, delay: 300, actionType: actionClick}
-            const clickBuyHorns = {x: 0.42, y: 0.34, delay: 300, actionType: actionClick}
-            const openFrontier = {x: 0.4566854990583804, y: 0.3443298969072165, delay: 500, actionType: actionClick}
-            const clickToBattle = {x: 0.9096045197740112, y: 0.8886597938144329, delay: 200, actionType: actionClick}
-            const clickAutoBattle = {x: 0.8935969868173258, y: 0.7608247422680412, delay: 200, actionType: actionClick}
-            const clickContinue = {x: 0.9030131826741996, y: 0.8907216494845361, delay :200, actionType: actionClick}
-            //runActions([openFrontier, delay(1000)])
-
-            for(let i=0; i<10000; i++) {
-                if (isRunningMacro != MACRO_CUSTOM) break
-                //await runActions([clickBuyTitanPotion], MACRO_CUSTOM)
-                //await runActions([clickBuyHorns], MACRO_CUSTOM)
-                await runActions([
-                    clickToBattle,
-                    clickAutoBattle,
-                    clickContinue,
-                    delay(1000)
-                ], MACRO_CUSTOM)
-            }
-            if (isRunningMacro == MACRO_CUSTOM) {
-                await releaseWakeLock()
-                isRunningMacro = null
-            }
-        }
-
-        async function spendOutlandCoins() {
-            if (isRunningMacro == MACRO_BUY_ITEMS) {
-                await releaseWakeLock()
-                isRunningMacro = null
-                return
-            }
-            isRunningMacro = MACRO_BUY_ITEMS
-            await enableWakeLock()
-            gameArea = gameCanvas.getBoundingClientRect()
-            canvasScaleX = gameCanvas.width / gameArea.width
-            canvasScaleY = gameCanvas.height / gameArea.height
-
-            function delay(msec) {
-                return {x: 2, y: 2, delay: msec, actionType: actionDelay}
-            }
-
-            const buyItem1 = {x: 0.4242, y: 0.3675, delay: 50, actionType: actionClick}
-            const buyItem2 = {x: 0.6186, y: 0.3675, delay: 50, actionType: actionClick}
-            const buyItem3 = {x: 0.8154, y: 0.3675, delay: 50, actionType: actionClick}
-            const buyItem4 = {x: 0.4242, y: 0.6058, delay: 50, actionType: actionClick}
-            const buyItem6 = {x: 0.8154, y: 0.6058, delay: 50, actionType: actionClick}
-            const buyItem7 = {x: 0.4265, y: 0.8314, delay: 50, actionType: actionClick}
-            const buyItem8 = {x: 0.6175, y: 0.8314, delay: 50, actionType: actionClick}
-
-            const reload100gems = {x: 0.64, y: 0.88, delay: 2000, actionType: actionClick}
-
-            for(let i=0; i<10000; i++) {
-                if (isRunningMacro != MACRO_BUY_ITEMS) break
-                await runActions([buyItem1, buyItem2, buyItem3, buyItem4, buyItem6, buyItem7, buyItem8, reload100gems], MACRO_BUY_ITEMS)
-            }
-            if (isRunningMacro == MACRO_BUY_ITEMS) {
                 await releaseWakeLock()
                 isRunningMacro = null
             }
