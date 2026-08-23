@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-22_19:57
+// @version      2026-08-23_14:13
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -13,6 +13,13 @@
     'use strict';
 
     /// ======== OPTIONS ==========
+    const WARDEN = false
+
+    // ======== REMOTE CONTROL via Telegram ==========
+    const TELEGRAM_REMOTE_CONTROL = false
+    const TELEGRAM_CONTROL_URL = 'http://127.0.0.1:8765'
+    const TELEGRAM_POLL_INTERVAL = 1000
+    const TELEGRAM_LAST_COMMAND_KEY = 'telegram_dungeon_last_command'
 
     const GAME_LOAD_TIMEOUT = 10000; // Time required for the game to initialize
 
@@ -68,8 +75,7 @@
         { id: 'fire', label: '🔥', color: '#F44336', dColor: '#7A211B', bColor: '#7A211B' },
     ]
 
-    const WARDEN = false
-
+    
     // service actions
     const actionTitle = 1
     const actionDelay = 2
@@ -189,6 +195,135 @@
         // MACRO stuff
 
         let isRunningMacro = null
+
+        // ======== TELEGRAM CONTROL =====================================================
+        let telegramPollTimer = null
+        let telegramPollRunning = false
+
+        function telegramGetLastCommand() {
+            return localStorage.getItem(TELEGRAM_LAST_COMMAND_KEY) || '0'
+        }
+
+        function telegramSetLastCommand(id) {
+            localStorage.setItem(TELEGRAM_LAST_COMMAND_KEY, String(id))
+        }
+
+        async function telegramPoll() {
+            if (telegramPollRunning) return
+            telegramPollRunning = true
+
+            try {
+                const response = await fetch(
+                    `${TELEGRAM_CONTROL_URL}/command?last=${encodeURIComponent(telegramGetLastCommand())}`,
+                    {
+                        method: 'GET',
+                        cache: 'no-store'
+                    }
+                )
+
+                if (!response.ok) {
+                    return
+                }
+
+                const command = await response.json()
+
+                if (!command || !command.id || !command.command) {
+                    return
+                }
+
+                telegramSetLastCommand(command.id)
+
+                console.log(
+                    '[Telegram] command:',
+                    command.command,
+                    'id:',
+                    command.id
+                )
+
+                if (command.command === 'start') {
+
+                    // Не запускаем второй экземпляр Dungeon
+                    if (isRunningMacro !== MACRO_DUNGEON) {
+                        console.log('[Telegram] Starting Dungeon')
+                        await runDungeonMacro()
+                    }
+
+                } else if (command.command === 'stop') {
+
+                    // Останавливаем только если Dungeon действительно работает
+                    if (isRunningMacro === MACRO_DUNGEON) {
+                        console.log('[Telegram] Stopping Dungeon')
+
+                        isRunningMacro = null
+
+                        setActivated(
+                            dungeonMacroButton,
+                            false,
+                            BUTTON_TEXT_STOP_DUNGEON,
+                            BUTTON_TEXT_RUN_DUNGEON
+                        )
+
+                        await releaseWakeLock()
+                    }
+                }
+
+            } catch (error) {
+                // Telegram server может быть временно недоступен.
+                // Не считаем это ошибкой игры.
+                console.log('[Telegram] control unavailable:', error.message)
+            } finally {
+                telegramPollRunning = false
+            }
+        }
+
+        async function startTelegramControl() {
+            if (!TELEGRAM_REMOTE_CONTROL) {
+                return
+            }
+
+            if (telegramPollTimer !== null) {
+                return
+            }
+
+            // Получаем текущую команду Telegram,
+            // но НЕ выполняем её.
+            try {
+                const response = await fetch(
+                    `${TELEGRAM_CONTROL_URL}/status`,
+                    {
+                        method: 'GET',
+                        cache: 'no-store'
+                    }
+                )
+
+                if (response.ok) {
+                    const status = await response.json()
+
+                    if (status && status.id) {
+                        telegramSetLastCommand(status.id)
+
+                        console.log(
+                            '[Telegram] Ignoring old command:',
+                            status.command,
+                            'id:',
+                            status.id
+                        )
+                    }
+                }
+
+            } catch (error) {
+                console.log(
+                    '[Telegram] Initial sync unavailable:',
+                    error.message
+                )
+            }
+
+            telegramPollTimer = setInterval(
+                telegramPoll,
+                TELEGRAM_POLL_INTERVAL
+            )
+        }
+
         let lvlTitle = ""
         let delayFactor = restoreFloat("delayFactor", 1.0)
 
@@ -199,8 +334,7 @@
         let readY = 0
         const pixels = new Uint8Array(4)
         let pendingRead = null
-        const originalRAF = window.requestAnimationFrame.bind(window)
-
+        
         let isRecordingClicks = false
         let recordedClicks = []
         let recordingConfig = { repeats: 1000, delay: 300 }
@@ -238,6 +372,7 @@
             }
         }
 
+        const originalRAF = window.requestAnimationFrame.bind(window)
         window.requestAnimationFrame = function(callback) {
             return originalRAF(function(time) {
                 try {
@@ -1910,7 +2045,7 @@
                 fastRightGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
                 fastRightGateActions.push({x: 0.995370, y: 0.389100, actionType: actionClick, delay: 50})
             }
-            
+
             const fastLeftGateTitle = "Fast left gate"
             let fastLeftGateActions = [{x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
@@ -2363,6 +2498,8 @@
         }
 
         addNiceToolbar()
+
+        await startTelegramControl()
 
         fromHomePage = true
         if (localStorage.getItem("last_macro") == MACRO_FRONTIER) {
