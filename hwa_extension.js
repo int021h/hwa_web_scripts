@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-23_20:27
+// @version      2026-08-24_01:54
 // @description  try to take over the world!
-// @author       Deidara
+// @author       You
 // @match        https://www.hero-wars-alliance.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hero-wars-alliance.com
 // @grant        none
@@ -21,13 +21,6 @@
     const MACRO_SESSION_START_KEY = 'macroSessionStart'
     const MACRO_RELOAD_COUNT_KEY = 'macroReloadCount'
 
-    // ======== REMOTE CONTROL via own Telegram bot ==========
-    const TELEGRAM_REMOTE_CONTROL = false
-    const TELEGRAM_CONTROL_URL = 'http://127.0.0.1:8765'
-    const TELEGRAM_POLL_INTERVAL = 1000
-    const TELEGRAM_LAST_COMMAND_KEY = 'telegram_dungeon_last_command'
-    const TELEGRAM_NOTIFY_EVERY_N_FLOORS = 10 // отправлять сообщение в Telegram каждые N пройденных этажей
-
     let GAME_LOAD_TIMEOUT = Number(localStorage.getItem('GAME_LOAD_TIMEOUT') || 10000) // Time required for the game to initialize
 
     let DELAY_CHECK_CYCLE = Number(localStorage.getItem('DELAY_CHECK_CYCLE') || 5000) // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
@@ -39,7 +32,7 @@
     const MAX_FLOORS = 10000
     let DELAY_AFTER_CLICKING_GUILD = Number(localStorage.getItem('DELAY_AFTER_CLICKING_GUILD') || 5000)
     let DELAY_AFTER_CLICKING_DUNGEON = Number(localStorage.getItem('DELAY_AFTER_CLICKING_DUNGEON') || 5000)
-    let EXTRA_GATE_DELAY_FIRST_FLOOR = Number(localStorage.getItem('EXTRA_GATE_DELAY_FIRST_FLOOR') || 0)
+    let EXTRA_GATE_DELAY_FIRST_FLOOR = Number(localStorage.getItem('EXTRA_GATE_DELAY_FIRST_FLOOR') || 500)
     let EXTRA_WALK_DELAY_FIRST_FLOOR = Number(localStorage.getItem('EXTRA_WALK_DELAY_FIRST_FLOOR') || 2000)
     let EXTRA_FLOOR_DELAY_FIRST_FLOOR = Number(localStorage.getItem('EXTRA_FLOOR_DELAY_FIRST_FLOOR') || 3000)
 
@@ -102,8 +95,15 @@
     const actionInterruptIfColor = 24
     const actionInterruptIfNotColor = 25
 
-    
-    // Sends Telegram msg through your local server.
+
+    // ======== REMOTE CONTROL via own Telegram bot ==========
+    const TELEGRAM_REMOTE_CONTROL = false
+    const TELEGRAM_CONTROL_URL = 'http://127.0.0.1:8765'
+    const TELEGRAM_POLL_INTERVAL = 1000
+    const TELEGRAM_LAST_COMMAND_KEY = 'telegram_dungeon_last_command'
+    const TELEGRAM_NOTIFY_EVERY_N_FLOORS = 10 // отправлять сообщение в Telegram каждые N пройденных этажей
+
+    // Отправляет произвольное сообщение в Telegram через локальный сервер.
     // ОЖИДАЕТСЯ, что локальный сервер (TELEGRAM_CONTROL_URL) умеет принимать
     // POST /notify с телом {message: "..."} и пересылать его в Telegram.
     async function sendTelegramNotify(message) {
@@ -138,6 +138,7 @@
         return new Date().toLocaleString('ru-RU', { hour12: false })
     }
 
+    
     // ========= CRASH HANDLERS =========
     // ----------------------- mmoebius
     // ugly workaround to check if errors occured
@@ -194,7 +195,7 @@
 
         container.appendChild(span)
 
-        while (container.children.length > 10) {
+        while (container.children.length > 20) {
             container.removeChild(container.firstChild)
         }
 
@@ -960,7 +961,7 @@
                 border: '1px solid rgb(212,161,110)',
             })
 
-            startMacroSession(true)
+            //startMacroSession(true)
 
             // ---------- popup ----------
 
@@ -1604,7 +1605,7 @@
                 { key: 'DELAY_CHECK_CYCLE', label: 'Max wait time until any required screen appears', defaultValue: 5000, getValue: () => DELAY_CHECK_CYCLE, setValue: v => { DELAY_CHECK_CYCLE = v } },
                 { key: 'DELAY_AFTER_CLICKING_GUILD', label: 'Delay after clicking on "Guild"', defaultValue: 5000, getValue: () => DELAY_AFTER_CLICKING_GUILD, setValue: v => { DELAY_AFTER_CLICKING_GUILD = v } },
                 { key: 'DELAY_AFTER_CLICKING_DUNGEON', label: 'Delay after clicking on "Dungeon"', defaultValue: 5000, getValue: () => DELAY_AFTER_CLICKING_DUNGEON, setValue: v => { DELAY_AFTER_CLICKING_DUNGEON = v } },
-                { key: 'EXTRA_GATE_DELAY_FIRST_FLOOR', label: 'Extra delay for the first floor gate', defaultValue: 0, getValue: () => EXTRA_GATE_DELAY_FIRST_FLOOR, setValue: v => { EXTRA_GATE_DELAY_FIRST_FLOOR = v } },
+                { key: 'EXTRA_GATE_DELAY_FIRST_FLOOR', label: 'Extra delay for the first floor gate', defaultValue: 500, getValue: () => EXTRA_GATE_DELAY_FIRST_FLOOR, setValue: v => { EXTRA_GATE_DELAY_FIRST_FLOOR = v } },
                 { key: 'EXTRA_WALK_DELAY_FIRST_FLOOR', label: 'Extra walk delay for the first floor', defaultValue: 2000, getValue: () => EXTRA_WALK_DELAY_FIRST_FLOOR, setValue: v => { EXTRA_WALK_DELAY_FIRST_FLOOR = v } },
                 { key: 'EXTRA_FLOOR_DELAY_FIRST_FLOOR', label: 'Extra floor delay for the first floor', defaultValue: 3000, getValue: () => EXTRA_FLOOR_DELAY_FIRST_FLOOR, setValue: v => { EXTRA_FLOOR_DELAY_FIRST_FLOOR = v } },
                 { key: 'EXTRA_DELAY_BEFORE_CONFIRM_BATTLE', label: 'Extra delay after HP check', defaultValue: 0, getValue: () => EXTRA_DELAY_BEFORE_CONFIRM_BATTLE, setValue: v => { EXTRA_DELAY_BEFORE_CONFIRM_BATTLE = v } },
@@ -1941,6 +1942,10 @@
                     console.log(document.title)
                 }
 
+                if (actionType != actionDelay) {
+                    addError("Running: " + JSON.stringify(action))
+                }
+
                 if (actionType == actionDelay) {
                     if (delay > 0) {
                         await sleep(delay, macro)
@@ -2077,7 +2082,7 @@
                             // =========== didn't see the required color => try to click again and wait one more time ==========
                             if (retries > 0) {
                                 document.title = "failed " + lvlTitle + ": " + title
-                                addError("popup detection: [" + lastPixel[0] + "," + lastPixel[1] + "," + lastPixel[2] + "]")
+                                // addError("popup detection: [" + lastPixel[0] + "," + lastPixel[1] + "," + lastPixel[2] + "]")
                                 addError("re-clicking (retries:" + retries + ") " + title + " [" + pixel[0] + "," + pixel[1] +","+ pixel[2] + "] != [" + color[0] +","+ color[1]+","+ color[2] + "]")
                                 retries--
                                 maxDelay = MAX_WAIT_BEFORE_RETRY
@@ -2423,19 +2428,20 @@
             }
 
             // ======= dungeon gates =======
-            const waitForGateRight = {x :0.6703741152679474, y:0.11393805309734513, color: [29,37,83], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for right gate scene"}
+            const waitForGateRight = {x :0.695023, y:0.105830, color: [226,226,235], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for right gate scene", threshold: 15}
             const gateRight = {x: 0.691268, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "clicking on right gate"}
 
-            const waitForGateMid = {x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for mid gate scene"}
+            const waitForGateMid = {x: 0.500000, y: 0.104563, color: [232,233,240], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for mid gate scene", threshold: 15}
             const gateMid = {x: 0.500, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "clicking on mid gate"}
 
-            const waitForGateLeft = {x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for left gate scene"}
+            const waitForGateLeft = {x: 0.314815, y: 0.107098, color: [235,234,241], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for left gate scene", threshold: 15}
             const gateLeft = {x: 0.312, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "clicking on left gate"}
 
             // ======= dungeon elemental rooms =======
             const roomSelectionTitle = "waiting for room selection popup"
-            const waitFor1RoomSelection = {x: 0.69969666, y: 0.8506637, actionType: actionWaitForColor, color: [17,12,6], delay: DELAY_CHECK_CYCLE, title: roomSelectionTitle}
-            const waitFor2RoomSelection = {x: 0.5, y: 0.5, color: [19,17,7], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: roomSelectionTitle}
+
+            const waitFor1RoomSelection = {x: 0.714699, y: 0.098226, actionType: actionWaitForColor, color: [241,192,102], threshold: 20, delay: DELAY_CHECK_CYCLE, title: roomSelectionTitle}
+            const waitFor2RoomSelection = {x: 0.876736, y: 0.102028, actionType: actionWaitForColor, color: [244,203,113], threshold: 20, delay: DELAY_CHECK_CYCLE, title: roomSelectionTitle}
             const roomMid = {x: 0.5, y: 0.795, delay: DELAY_AFTER_ROOM_CLICKED, actionType: actionClick, title: "clicking on mid room"}
 
             //  ======= usage: checkRoomColors, roomLeft, roomRight =======
@@ -2443,8 +2449,8 @@
             const roomLeft = {x: 0.3076, y: 0.8, delay: DELAY_AFTER_ROOM_CLICKED, actionType: actionClick, title: "clicking on left room"}
             const roomRight = {x: 0.6833, y: 0.8, delay: DELAY_AFTER_ROOM_CLICKED, actionType: actionClick, title: "clicking on right room"}
             // ======= dungeon battlefield screen =======
-
-            const waitForBattlefield = {x: 0.014553, y: 0.952164, color: [34,46,64], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for battlefield scene"}
+            
+            const waitForBattlefield = {x: 0.039352, y: 0.047529, color: [234,203,151], delay: DELAY_CHECK_CYCLE, actionType: actionWaitForColor, title: "waiting for battlefield scene"}
             const autoBattle = {x: 0.87214, y: 0.758542, delay: DELAY_AFTER_CLICKING_AUTOBATTLE, actionType: actionClick, title: "clicking autobattle"}
 
             // ======= dungeon confirm auto-battle results screen =======
@@ -2474,14 +2480,16 @@
             const fastRightGateTitle = "Fast right gate"
             let fastRightGateActions = [{x: 0.995370, y: 0.389100, actionType: actionClick, delay: 100}]
             for (let i=0; i<10; i++) {
-                fastRightGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
+                fastRightGateActions.push({x: 0.714699, y: 0.098226, actionType: actionJumpIf, color: [241,192,102], threshold: 20, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
+                fastRightGateActions.push({x: 0.876736, y: 0.102028, actionType: actionJumpIf, color: [244,203,113], threshold: 20, title: fastRightGateTitle, jumpTitle: roomSelectionTitle})
                 fastRightGateActions.push({x: 0.995370, y: 0.389100, actionType: actionClick, delay: 100})
             }
-
+            
             const fastLeftGateTitle = "Fast left gate"
             let fastLeftGateActions = [{x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50}]
             for (let i=0; i<10; i++) {
-                fastLeftGateActions.push({x: 0.502315, y: 0.126743, actionType: actionJumpIf, color: [20,17,4], threshold: 15, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
+                fastLeftGateActions.push({x: 0.714699, y: 0.098226, actionType: actionJumpIf, color: [241,192,102], threshold: 20, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
+                fastLeftGateActions.push({x: 0.876736, y: 0.102028, actionType: actionJumpIf, color: [244,203,113], threshold: 20, title: fastLeftGateTitle, jumpTitle: roomSelectionTitle})
                 fastLeftGateActions.push({x: 0.005370, y: 0.389100, actionType: actionClick, delay: 50})
             }
 
