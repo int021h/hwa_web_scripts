@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-24_18:36
+// @version      2026-08-24_19:02
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -412,6 +412,8 @@
         let macroTimeEl = null
         let macroTimerInterval = null
 
+        //// =========== ELEMENTS PRIORITY =========== ////
+        const STORAGE_KEY = 'elements_priority'
         let elementsOrder = loadOrder()
         function loadOrder() {
             try {
@@ -807,9 +809,6 @@
                 debugButton.style.filter = 'brightness(1)'
             }
             debugButton.addEventListener('click', toggleDebug)
-
-            //// =========== ELEMENTS PRIORITY =========== ////
-            const STORAGE_KEY = 'elements_priority'
 
             // ---------- container ----------
             const elements = document.createElement('div')
