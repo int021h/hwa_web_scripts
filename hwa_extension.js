@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-24_01:54
+// @version      2026-08-24_18:36
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -68,6 +68,7 @@
     const MACRO_DAILY = 'daily'
     const MACRO_FRONTIER = 'frontier'
     const MACRO_REPEAT_CLICK = 'repeat_click'
+    const LAST_MACRO_KEY = 'last_macro'
 
     const DEFAULT_ORDER = [
         //{ id: 'mixed', label: '⚡', background: 'linear-gradient(to bottom, #806104, #FFC107)', bColor: '#806104' },
@@ -411,6 +412,34 @@
         let macroTimeEl = null
         let macroTimerInterval = null
 
+        let elementsOrder = loadOrder()
+        function loadOrder() {
+            try {
+                const saved = JSON.parse(
+                    localStorage.getItem(STORAGE_KEY)
+                )
+                if (!Array.isArray(saved)) {
+                    return DEFAULT_ORDER
+                }
+                const mapped = saved
+                    .map(id => DEFAULT_ORDER.find(x => x.id === id))
+                    .filter(Boolean)
+                if (mapped.length !== DEFAULT_ORDER.length) {
+                    return DEFAULT_ORDER
+                }
+                return mapped
+            } catch {
+                return DEFAULT_ORDER
+            }
+        }
+
+        function saveOrder() {
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(elementsOrder.map(x => x.id))
+            )
+        }
+
         function formatDuration(ms) {
             const totalSeconds = Math.max(0, Math.floor(ms / 1000))
             const hours = Math.floor(totalSeconds / 3600)
@@ -444,7 +473,7 @@
         }
 
         function stopMacroSession() {
-            localStorage.setItem("last_macro", null)
+            localStorage.setItem(LAST_MACRO_KEY, null)
 
             if (macroTimerInterval != null) {
                 clearInterval(macroTimerInterval)
@@ -770,7 +799,7 @@
             debugButton.id = 'debugButton'
             debugButton.textContent = BUTTON_TEXT_RUN_DEBUG
 
-            Object.assign(debugButton.style, greenButtonStyle)        
+            Object.assign(debugButton.style, greenButtonStyle)
             debugButton.onmouseenter = () => {
                 debugButton.style.filter = 'brightness(1.12)'
             }
@@ -792,35 +821,6 @@
                 userSelect: 'none',
                 zIndex: '999999'
             })
-
-            // ---------- storage ----------
-            function loadOrder() {
-                try {
-                    const saved = JSON.parse(
-                        localStorage.getItem(STORAGE_KEY)
-                    )
-                    if (!Array.isArray(saved)) {
-                        return DEFAULT_ORDER
-                    }
-                    const mapped = saved
-                    .map(id => DEFAULT_ORDER.find(x => x.id === id))
-                    .filter(Boolean)
-                    if (mapped.length !== DEFAULT_ORDER.length) {
-                        return DEFAULT_ORDER
-                    }
-                    return mapped
-                } catch {
-                    return DEFAULT_ORDER
-                }
-            }
-
-            let elementsOrder = loadOrder()
-            function saveOrder() {
-                localStorage.setItem(
-                    STORAGE_KEY,
-                    JSON.stringify(elementsOrder.map(x => x.id))
-                )
-            }
 
             // ---------- render ----------
             function render() {
@@ -925,10 +925,6 @@
                 })
             }
 
-            window.getElementsPriority = function() {
-                return elementsOrder.map(x => x.id)
-            }
-
             render()
 
             // =========== DAILY ===========
@@ -937,7 +933,9 @@
             dailyButton.id = 'dailyButton'
             dailyButton.textContent = BUTTON_TEXT_RUN_CUSTOM
 
-            Object.assign(dailyButton.style, greenButtonStyle)
+            Object.assign(dailyButton.style, greenButtonStyle, {
+                marginLeft: '10px'
+            })
             
             dailyButton.onmouseenter = () => {
                 dailyButton.style.filter = 'brightness(1.12)'
@@ -954,9 +952,9 @@
             Object.assign(macroTimeEl.style, {
                 color: '#fff6d6',
                 fontSize: '12px',
-                padding: '4px 6px',
-                marginLeft: '6px',
-                marginRight: '6px',
+                padding: '6px 10px',
+                marginLeft: '10px',
+                marginRight: '10px',
                 borderRadius: '6px',
                 border: '1px solid rgb(212,161,110)',
             })
@@ -1748,7 +1746,10 @@
             logsButton.id = 'logsButton'
             logsButton.textContent = '📋 Logs'
             
-            Object.assign(logsButton.style, blueButtonStyle)
+            Object.assign(logsButton.style, blueButtonStyle, { 
+                marginLeft: '10px',
+                marginRight: '10px',
+            })
             logsButton.onmouseenter = () => {
                 logsButton.style.filter = 'brightness(1.12)'
             }
@@ -2015,7 +2016,7 @@
                             isRunningMacro = null
                             await releaseWakeLock()
 
-                            localStorage.setItem("last_macro", MACRO_FRONTIER)
+                            localStorage.setItem(LAST_MACRO_KEY, MACRO_FRONTIER)
                             reloadPage('низкое HP титана: ' + error)
                         }
                         return
@@ -2100,13 +2101,11 @@
                 } else if (actionType == actionChooseRoom) {
                     let leftPixel = await readPixelOnDraw(gameArea.width * x * canvasScaleX,gameArea.height * y * canvasScaleY)
                     let leftCategory = getColorCategory(leftPixel)
-                    let leftColor = `rgb(${leftPixel[0]}, ${leftPixel[1]}, ${leftPixel[2]})`
-
+                    
                     let rightPixel = await readPixelOnDraw(gameArea.width * altX * canvasScaleX,gameArea.height * y * canvasScaleY)
                     let rightCategory = getColorCategory(rightPixel)
-                    let rightColor = `rgb(${rightPixel[0]}, ${rightPixel[1]}, ${rightPixel[2]})`
-
-                    const priority = window.getElementsPriority()
+                    
+                    const priority = elementsOrder.map(x => x.id)
                     const chooseRight = priority.indexOf(rightCategory) <= priority.indexOf(leftCategory)
                     if (chooseRight) {
                         skipActions = 1
@@ -2381,7 +2380,7 @@
                 await sendTelegramNotify(`⏹ Скрипт остановлен\nВремя: ${formatNowForTelegram()}`)
                 return
             }
-            localStorage.setItem("last_macro", MACRO_DUNGEON)
+            localStorage.setItem(LAST_MACRO_KEY, MACRO_DUNGEON)
 
             setActivated(dailyButton, true, BUTTON_TEXT_STOP_MACRO + MACRO_DUNGEON, BUTTON_TEXT_RUN_CUSTOM)
             isRunningMacro = MACRO_DUNGEON
@@ -2508,22 +2507,21 @@
                 const waitForHomeTitle = "Waiting for home screen"
                 const clickOnGuildTitle = "Click on guild"
 
-                const checkHomePopup = {x: 0.971644, y: 0.054499, actionType: actionJumpIfNot, color: [245,209,117], title: waitForHomeTitle}
+                const checkHomePopup = {x: 0.971644, y: 0.054499, actionType: actionJumpIfNot, color: [245,209,117], title: "Checking if there is a popup", jumpTitle: waitForHomeTitle}
                 const closeHomePopup = {x: 0.971644, y: 0.054499, actionType: actionClick, title: "closing popup", delay: 1000}
 
                 await runActions([
-                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
-                    {x: 0.334182, y: 0.907063, actionType: actionJumpIf, color: [235,236,198], delay: 5000, title: waitForHomeTitle, jumpTitle: clickOnGuildTitle},
+                    {x: 0.59375, y: 0.908112, actionType: actionJumpIf, color: [235,236,199], title: waitForHomeTitle, jumpTitle: clickOnGuildTitle},
                     checkHomePopup,
                     closeHomePopup,
                     checkHomePopup,
                     closeHomePopup,
-                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
+                    {x: 0.59375, y: 0.908112, actionType: actionWaitForColor, color: [235,236,199], delay: 30000, title: waitForHomeTitle, threshold: 20},
                     {actionType: actionDelay, delay: 2000, title: clickOnGuildTitle}
                 ], MACRO_DUNGEON, 0)
 
                 await runActions([
-                    {x: 0.332755, y: 0.910013, actionType: actionClick, title: clickOnGuildTitle},
+                    {x: 0.594329, y: 0.908112, actionType: actionClick, title: clickOnGuildTitle},
                     {x: 0.273832, y: 0.612474, actionType: actionWaitForColor, color:[72,39,0], delay: DELAY_AFTER_CLICKING_GUILD, title: "Waiting for guild screen"},
                     delay(2000),
                     {x: 0.241220, y: 0.480769, actionType: actionClick, delay: DELAY_AFTER_CLICKING_DUNGEON, title: "click on dungeon"}
@@ -2609,7 +2607,7 @@
                 isRunningMacro = null
                 return
             }
-            localStorage.setItem("last_macro", MACRO_FRONTIER)
+            localStorage.setItem(LAST_MACRO_KEY, MACRO_FRONTIER)
             setActivated(dailyButton, true, BUTTON_TEXT_STOP_MACRO + MACRO_FRONTIER, BUTTON_TEXT_RUN_CUSTOM)
             isRunningMacro = MACRO_FRONTIER
             startMacroSession(isResume)
@@ -2655,32 +2653,30 @@
             const clickCloseReorderTeams = {x: 0.971644, y: 0.052598, actionType: actionClick, delay: 300, title: "close reorder teams"}
 
             const battleLoop = [waitForBattlePreparation, delay(500), clickAutoBattle, waitForLose, delay(500), clickContinue, waitForFrontier, delay(500), clickToBattle]
-
+            const clickFrontierTitle = "Click frontier"
             if (fromHomePage) {
                 fromHomePage = false
 
                 // ========== initial game screen =============
                 const waitForHomeTitle = "Waiting for home screen"
-                const clickOnGuildTitle = "Click on guild"
-
+                
                 const checkHomePopup = {x: 0.971644, y: 0.054499, actionType: actionJumpIfNot, color: [245,209,117], title: waitForHomeTitle}
                 const closeHomePopup = {x: 0.971644, y: 0.054499, actionType: actionClick, title: "closing popup", delay: 1000}
-
+ 
                 await runActions([
-                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
-                    {x: 0.334182, y: 0.907063, actionType: actionJumpIf, color: [235,236,198], delay: 5000, title: waitForHomeTitle, jumpTitle: clickOnGuildTitle},
+                    {x: 0.59375, y: 0.908112, actionType: actionJumpIf, color: [235,236,199], title: waitForHomeTitle, jumpTitle: clickFrontierTitle},
                     checkHomePopup,
                     closeHomePopup,
                     checkHomePopup,
                     closeHomePopup,
-                    {x: 0.334182, y: 0.907063, actionType: actionWaitForColor, color: [235,236,198], delay: 30000, title: waitForHomeTitle},
+                    {x: 0.59375, y: 0.908112, actionType: actionWaitForColor, color: [235,236,199], delay: 30000, title: waitForHomeTitle},
                     delay(2000),
-                ], MACRO_DUNGEON, 0)
+                ], MACRO_FRONTIER, 0)
             }
 
             await runActions([
                 {actionType: actionTitle, title: "Frontier"},
-                {x: 0.464120, y: 0.239544, actionType: actionClick, delay: 500, title: "Click frontier"},
+                {x: 0.464120, y: 0.239544, actionType: actionClick, delay: 500, title: clickFrontierTitle},
                 waitForFrontier, delay(500), clickToBattle
             ], MACRO_FRONTIER)
 
@@ -2963,11 +2959,11 @@
 
         await startTelegramControl()
 
-        if (localStorage.getItem("last_macro") == MACRO_FRONTIER) {
+        if (localStorage.getItem(LAST_MACRO_KEY) == MACRO_FRONTIER) {
             const groups = parseFrontierGroups(localStorage.getItem(FRONTIER_GROUPS_STORAGE_KEY)) || []
             fromHomePage = true
             await runFrontier(groups, Number(localStorage.getItem(FRONTIER_ATTEMPTS_STORAGE_KEY) || 3), Number(localStorage.getItem(FRONTIER_TEAMS_STORAGE_KEY) || 10), true)
-        } else if (localStorage.getItem("last_macro") == MACRO_DUNGEON) {
+        } else if (localStorage.getItem(LAST_MACRO_KEY) == MACRO_DUNGEON) {
             fromHomePage = true
             await runDungeonMacro(true)
         }
