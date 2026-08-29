@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-29_00:34
+// @version      2026-08-15:52
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -37,7 +37,7 @@
 
     let GAME_LOAD_TIMEOUT = Number(localStorage.getItem('GAME_LOAD_TIMEOUT') || 10000) // Time required for the game to initialize
 
-    let DELAY_CHECK_CYCLE = Number(localStorage.getItem('DELAY_CHECK_CYCLE') || 5000) // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
+    let DELAY_CHECK_CYCLE = Number(localStorage.getItem('DELAY_CHECK_CYCLE') || 10000) // check control pixel every 100msec until MAX_WAIT_BEFORE_RETRY
     const MAX_WAIT_BEFORE_RETRY = 5000 // max waiting time for a new screen to appear
     const MAX_RETRIES = 3 // after 3 retries if screen didn't appear => page will be reloaded and script restarts
     const RELOAD_PAGE_ON_FAILURE = true //
@@ -111,21 +111,84 @@
     // ======== screens (control pixels used to detect game state) ==========
     // ============ Home ===========
     const screenHomePopup = [{x: 0.971644, y: 0.054499, color: [245,209,117]}]
-    const screenHome = [{x: 0.59375, y: 0.908112, color: [235,236,199]}]
+    const screenHome = [{x: 0.59375, y: 0.908112, color: [235,236,199]}, {x: 0.883876, y: 0.053931, color: [254,255,97]}]
     const screenGuild = [{x: 0.273832, y: 0.612474, color: [72,39,0]}, {x: 0.241437, y: 0.297075, color: [213,21,26]}]
     
     // ============ Dungeon ===========
-    const screenRightGate = [{x: 0.695023, y: 0.105830, color: [226,226,235]}]
-    const screenMidGate = [{x: 0.500000, y: 0.104563, color: [232,233,240]}]
-    const screenLeftGate = [{x: 0.314815, y: 0.107098, color: [235,234,241]}]
-    const popupOneRoomSelection = [{x: 0.714699, y: 0.098226, color: [241,192,102]}]
-    const popupTwoRoomsSelection = [{x: 0.876736, y: 0.102028, color: [244,203,113]}]
+    const screenLvl1 = [
+        {x: 0.695023, y: 0.105830, color: [226,226,235]},
+        {x: 0.274401, y: 0.193548, color: [77,6,11]},
+        {x: 0.19337, y: 0.209677, color: [47,55,64]},
+        {x: 0.837937, y: 0.211694, color: [49,49,65]}
+    ]
+    const screenLvl234 = [
+        {x: 0.880535, y: 0.194698, color: [60,37,65]},
+        {x: 0.500000, y: 0.104563, color: [232,233,240]}, 
+        {x: 0.52548, y: 0.156307, color: [25,32,76]}, 
+        {x: 0.642439, y: 0.211152, color: [49,49,65]},
+        {x: 0.195489, y: 0.211152, color: [56,52,69]}
+    ]
+    const screenLvl5 = [
+        {x: 0.314815, y: 0.107098, color: [235,234,241]}, 
+        {x: 0.340852, y: 0.117916, color: [24,33,78]}, 
+        {x: 0.162072, y: 0.211152, color: [49,49,65]}, 
+        {x: 0.455305, y: 0.211152, color: [49,49,65]}
+    ]
+    const screenFloor1Final = [
+        {x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26]}, 
+        {x: 0.160401, y: 0.209324, color: [49,49,66]}, 
+        {x: 0.457811, y: 0.209324, color: [49,49,66]}, 
+        {x: 0.649958, y: 0.300731, color: [51,54,60]}
+    ]
+    const screenLvl6 = [
+        {x: 0.314815, y: 0.107098, color: [235,234,241]}, 
+        {x: 0.340852, y: 0.117916, color: [24,33,78]},
+        {x: 0.725982, y: 0.19287, color: [76,6,11]}
+    ]
+    const screenLvl789 = [
+        {x: 0.500000, y: 0.104563, color: [232,233,240]}, 
+        {x: 0.52548, y: 0.156307, color: [25,32,76]}, 
+        {x: 0.642439, y: 0.211152, color: [49,49,65]},
+        {x: 0.792818, y: 0.207661, color: [56,52,69]}
+    ]
+    const screenLvl0 = [
+        {x: 0.695023, y: 0.105830, color: [226,226,235]},
+        {x: 0.669429, y: 0.114919, color: [31,38,86]},
+        {x: 0.349908, y: 0.298387, color: [49,54,60]},
+        {x: 0.197974, y: 0.294355, color: [52,58,64]},
+        {x: 0.277164, y: 0.477823, color: [144,78,0]}
+    ]
+    const screenFloor2Final = [
+        {x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28]},
+        {x: 0.274401, y: 0.181452, color: [57,70,93]},
+        {x: 0.838858, y: 0.21371, color: [49,49,65]}
+    ]
+    const popupOneRoomSelection = [
+        {x: 0.714699, y: 0.098226, color: [241,192,102]},
+        {x: 0.495396, y: 0.106855, color: [97,49,0]},
+        {x: 0.558011, y: 0.633065, color: [176,207,248]},
+        {x: 0.494475, y: 0.891129, color: [20,16,4]}
+    ]
+    const popupTwoRoomsSelection = [
+        {x: 0.876736, y: 0.102028, color: [244,203,113]}, 
+        {x: 0.500418, y: 0.80713, color: [16,14,4]}, 
+        {x: 0.370092, y: 0.63894, color: [179,204,245]},
+        {x: 0.494475, y: 0.891129, color: [20,16,4]}
+    ]
     const screenBattlefield = [{x: 0.039352, y: 0.047529, color: [234,203,151]}]
-    const popupBattleResult = [{x: 0.60083, y: 0.127563, color: [137,1,0]}]
-    const popupBattleResult5Titans = [{x: 0.500418, y: 0.287934, color: [235,235,235]}]
-    const screenFloor1Final = [{x: 0.3163664839467502, y: 0.1320754716981132, color: [18,21,26]}]
-    const screenFloor2Final = [{x: 0.6985121378230227, y: 0.14408233276157806, color: [20,22,28]}]
-    const popupFloorReward = [{x: 0.5, y: 0.5, color: [22,12,8]}]
+    const popupBattleResult = [
+        {x: 0.60083, y: 0.127563, color: [137,1,0]}, 
+        {x: 0.497911, y: 0.792505, color: [46,125,192]}
+    ]
+    const popupBattleResult5Titans = [
+        {x: 0.544104, y: 0.825203, color: [51,132,202], threshold: 30},
+        {x: 0.402971, y: 0.825203, color: [55,142,216], threshold: 30},
+        {x: 0.54039, y: 0.365854, color: [33,28,41], threshold: 10},
+        {x: 0.620241, y: 0.357724, color: [33,28,41], threshold: 10},
+        {x: 0.542247, y: 0.369919, color: [33,28,41], threshold: 10},
+    ]
+    
+    const popupFloorReward = [{x: 0.5, y: 0.5, color: [22,12,8]}, {x: 0.387636, y: 0.403108, color: [78,6,11]}, {x: 0.258145, y: 0.264168, color: [22,12,8]}, {x: 0.634921, y: 0.567642, color: [255,252,109]}]
     const screenPastRightGate = [{x: 0.6703741152679474, y: 0.11393805309734513, color: [29,37,83]}]
     const screenPastMidGate = [{x: 0.4752275025278059, y: 0.11172566371681415, color: [28,36,81]}]
     const screenPastLeftGate = [{x: 0.2901921132457027, y: 0.11172566371681415, color: [28,36,81]}]
@@ -2391,6 +2454,32 @@
 
             const { logsButton, logsPopup } = buildLogsPopup(latestLogEl)
 
+            const copyLineButton = document.createElement('button')
+            copyLineButton.id = 'copyLineButton'
+            copyLineButton.textContent = '📋'
+            copyLineButton.title = 'Copy this line'
+
+            Object.assign(copyLineButton.style, {
+                background: 'transparent',
+                border: 'none',
+                padding: '0',
+                fontSize: '18px',
+                lineHeight: '1',
+                cursor: 'pointer',
+                opacity: '0.75',
+                transition: '0.15s ease'
+            })
+            copyLineButton.onmouseenter = () => {
+                copyLineButton.style.opacity = '1'
+            }
+            copyLineButton.onmouseleave = () => {
+                copyLineButton.style.opacity = '0.75'
+            }
+            copyLineButton.addEventListener('click', (e) => {
+                e.stopPropagation()
+                navigator.clipboard.writeText(latestLogEl.textContent)
+            })
+
             const logLineBox = document.createElement('div')
             Object.assign(logLineBox.style, {
                 display: 'flex',
@@ -2406,6 +2495,7 @@
                 padding: '2px 10px 2px 10px'
             })
             logLineBox.appendChild(latestLogEl)
+            logLineBox.appendChild(copyLineButton)
             logLineBox.appendChild(logsButton)
 
             if (WARDEN) {
@@ -2524,32 +2614,23 @@
                     }
                 } else if (actionType == actionInterruptIfColor || actionType == actionInterruptIfNotColor) {
                     const { xx = [], y = 0, color = [], threshold = COLORS_MATCH_THRESHOLD } = action
+                    const CHECK_RETRIES = 10
                     let isOk = true
                     let titanI = 0
                     let titanX = 0
                     let testPixel = []
 
-                    for (let i = 0; i < xx.length; i++) {
-                        ;[testPixel] = await readColorsAtCoords([
-                            [gameArea.width * xx[i] * canvasScaleX, gameArea.height * y * canvasScaleY],
-                        ])
-
-                        if ((actionType == actionInterruptIfColor && colorsAreSame(testPixel, color, threshold)) || (actionType == actionInterruptIfNotColor && !colorsAreSame(testPixel, color, threshold))) {
-                            isOk = false
-                            titanI = i
-                            titanX = xx[i]
-                            addError("HP check failed for " + xx.length + " titans")
-                            break
+                    for (let attempt = 0; attempt < CHECK_RETRIES; attempt++) {
+                        if (attempt > 0) {
+                            await sleep(5000, macro)
                         }
-                    }
 
-                    if (!isOk) {
-                        await sleep(5000, macro)
                         isOk = true
                         for (let i = 0; i < xx.length; i++) {
                             ;[testPixel] = await readColorsAtCoords([
                                 [gameArea.width * xx[i] * canvasScaleX, gameArea.height * y * canvasScaleY],
                             ])
+
                             if ((actionType == actionInterruptIfColor && colorsAreSame(testPixel, color, threshold)) || (actionType == actionInterruptIfNotColor && !colorsAreSame(testPixel, color, threshold))) {
                                 isOk = false
                                 titanI = i
@@ -2557,6 +2638,10 @@
                                 addError("HP check failed for " + xx.length + " titans")
                                 break
                             }
+                        }
+
+                        if (isOk) {
+                            break
                         }
                     }
 
@@ -2589,13 +2674,21 @@
                         skipUntilAction = jumpTitle
                         //addError("Detected: " + jumpTitle + " " + pixels.map((p, i) => "[" + testPixels[i] + "] == [" + p.color + "]").join(", "))
                         //document.title = "Jump detected: " + jumpTitle
-                    } 
+                    } else {
+                        if (title == "Check if there are 5 titans") {
+                            addError("not 5 titans? " + pixels.map((p, i) => "[" + testPixels[i] + "] == [" + p.color + "]").join(", "))
+                        }
+                    }
                 } else if (actionType == actionJumpIfNotScreen) {
                     const { pixels = [], threshold = COLORS_MATCH_THRESHOLD, jumpTitle = title } = action
                     const testPixels = await readColorsAtCoords(pixels.map(p => [gameArea.width * p.x * canvasScaleX, gameArea.height * p.y * canvasScaleY]))
                     if (!pixels.every((p, i) => colorsAreSame(testPixels[i], p.color, p.threshold ?? threshold))) {
                         skipUntilAction = jumpTitle
                         //document.title = "Jump detected: " + jumpTitle
+                    } else {
+                        if (title == "Check if there are 5 titans") {
+                            addError("not 5 titans? " + pixels.map((p, i) => "[" + testPixels[i] + "] == [" + p.color + "]").join(", "))
+                        }
                     }
                 } else if (actionType == actionWaitForScreen) {
                     const { pixels = [], delay = 0, threshold = COLORS_MATCH_THRESHOLD } = action
@@ -2983,13 +3076,16 @@
             let checkIf5Titans = {pixels: popupBattleResult5Titans, actionType: actionJumpIfScreen, title: "Check if there are 5 titans", threshold: 20, jumpTitle: check5TitansHpTitle}
 
             // ======= dungeon gates =======
-            const waitForGateRight = {pixels: screenRightGate, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for right gate scene", threshold: 15}
+            const waitForLvl0 = {pixels: screenLvl0, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for right gate scene", threshold: 15}
+            const waitForLvl1 = {pixels: screenLvl1, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for right gate scene", threshold: 15}
             const gateRight = {x: 0.691268, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "Clicking on right gate"}
 
-            const waitForGateMid = {pixels: screenMidGate, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for mid gate scene", threshold: 15}
+            const waitForLvl234 = {pixels: screenLvl234, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for lvl2/3/4", threshold: 15}
+            const waitForLvl789 = {pixels: screenLvl789, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for mid gate scene", threshold: 15}
             const gateMid = {x: 0.500, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "Clicking on mid gate"}
 
-            const waitForGateLeft = {pixels: screenLeftGate, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for left gate scene", threshold: 15}
+            const waitForLvl5 = {pixels: screenLvl5, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for lvl5", threshold: 15}
+            const waitForLvl6 = {pixels: screenLvl6, delay: DELAY_CHECK_CYCLE, actionType: actionWaitForScreen, title: "Waiting for lvl6", threshold: 15}
             const gateLeft = {x: 0.312, y: 0.5, delay: DELAY_AFTER_GATE_CLICKED, actionType: actionClick, title: "Clicking on left gate"}
 
             // ======= dungeon elemental rooms =======
@@ -3128,17 +3224,17 @@
             for (let i = 0; i < floors; i++) {
                 if (isRunningMacro != MACRO_DUNGEON) break
                 await runActions([
-                    title("lvl1"), ...fastRightGateActions, waitForGateRight, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl2"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl3"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl4"), ...fastRightGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl5"), ...fastRightGateActions, waitForGateLeft, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl1"), ...fastRightGateActions, waitForLvl1, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl2"), ...fastRightGateActions, waitForLvl234, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl3"), ...fastRightGateActions, waitForLvl234, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl4"), ...fastRightGateActions, waitForLvl234, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl5"), ...fastRightGateActions, waitForLvl5, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("floor1"), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm,
-                    title("lvl6"), ...fastLeftGateActions, waitForGateLeft, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl7"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl8"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    title("lvl9"), ...fastLeftGateActions, waitForGateMid, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
-                    title("lvl0"), ...fastLeftGateActions, waitForGateRight, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl6"), ...fastLeftGateActions, waitForLvl6, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl7"), ...fastLeftGateActions, waitForLvl789, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl8"), ...fastLeftGateActions, waitForLvl789, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    title("lvl9"), ...fastLeftGateActions, waitForLvl789, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
+                    title("lvl0"), ...fastLeftGateActions, waitForLvl0, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title("floor2"), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
                 ], MACRO_DUNGEON)
 
@@ -3210,7 +3306,6 @@
 
                 return {x: 0.5, y: y, altX: 0.5, altY: yTeam1, delay: 100, actionType: actionDragDrop, title: "Scroll +4 teams"}
             }
-            const leaveFrontierLabel = "Leave Frontier"
             const waitForFrontier = {pixels: screenFrontier, actionType: actionWaitForScreen, delay: 5000, title: "Waiting for frontier"}
             const clickToBattle = {x: 0.909604, y: 0.888660, delay: 200, actionType: actionClick, title: "Click to battle"}
             const waitForBattlePreparation = {pixels: screenBattlePrep, actionType: actionWaitForScreen, delay: 5000, title: "Waiting for battle prep."}
