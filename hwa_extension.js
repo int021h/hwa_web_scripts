@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-30_02:43
+// @version      2026-08-30_03:19
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -140,7 +140,7 @@
         {"x": 0.314815, "y": 0.107098, "color": [235,234,241]},
         {"x": 0.340852, "y": 0.117916, "color": [24,33,78]},
         {"x": 0.162072, "y": 0.211152, "color": [49,49,65]},
-        {"x": 0.455305, "y": 0.211152, "color": [49,49,65]}, 
+        {"x": 0.455305, "y": 0.211152, "color": [49,49,65]},
         {"x": 0.729745, "y": 0.479721, "color": [135,75,0], "threshold": 20}
     ]
     const screenFloor1Final = [
@@ -202,15 +202,6 @@
         {"x": 0.387636, "y": 0.403108, "color": [78,6,11]},
         {"x": 0.258145, "y": 0.264168, "color": [22,12,8]},
         {"x": 0.634921, "y": 0.567642, "color": [255,252,109]}
-    ]
-    const screenPastRightGate = [
-        {"x": 0.6703741152679474, "y": 0.11393805309734513, "color": [29,37,83]}
-    ]
-    const screenPastMidGate = [
-        {"x": 0.4752275025278059, "y": 0.11172566371681415, "color": [28,36,81]}
-    ]
-    const screenPastLeftGate = [
-        {"x": 0.2901921132457027, "y": 0.11172566371681415, "color": [28,36,81]}
     ]
 
     // ============ Frontier ===========
@@ -3341,11 +3332,8 @@
 
             // ======== screen detection for the first floor =========
             const initialFloorRooms = [checkRoomColors, roomLeft, roomRight, roomMid]
-            
-            const lvl0 = "Dungeon level 0"
-            const lvl1 = "Dungeon level 1"
-            const lvl5 = "Dungeon level 5"
-            const lvl6 = "Dungeon level 6"
+
+            function lvl(index) { return `Dungeon level ${index}` }
             const floor1 = "Dungeon floor1 (level 5 -> 6)"
             const floor2 = "Dungeon floor2 (level 0 -> 1)"
             const lvl234 = "Dungeon levels 2 to 4"
@@ -3355,17 +3343,17 @@
             let detectAttempts = 10
             while (skipUntilAction == null) {
                 await runActions([
-                    {actionType: actionJumpIfScreen, pixels: screenLvl1, title: "Checking if we're on " + lvl1, jumpTitle: lvl1, skipLog: skipLogs},
-                    {actionType: actionJumpIfScreen, pixels: screenLvl0, title: "Checking if we're on " + lvl0, jumpTitle: lvl0, skipLog: skipLogs},
-                    {actionType: actionJumpIfScreen, pixels: screenLvl5, title: "Checking if we're on " + lvl5, jumpTitle: lvl5, skipLog: skipLogs},
-                    {actionType: actionJumpIfScreen, pixels: screenLvl6, title: "Checking if we're on " + lvl6, jumpTitle: lvl6, skipLog: skipLogs},
+                    {actionType: actionJumpIfScreen, pixels: screenLvl1, title: "Checking if we're on " + lvl(1), jumpTitle: lvl(1), skipLog: skipLogs},
+                    {actionType: actionJumpIfScreen, pixels: screenLvl0, title: "Checking if we're on " + lvl(0), jumpTitle: lvl(0), skipLog: skipLogs},
+                    {actionType: actionJumpIfScreen, pixels: screenLvl5, title: "Checking if we're on " + lvl(5), jumpTitle: lvl(5), skipLog: skipLogs},
+                    {actionType: actionJumpIfScreen, pixels: screenLvl6, title: "Checking if we're on " + lvl(6), jumpTitle: lvl(6), skipLog: skipLogs},
                     {actionType: actionJumpIfScreen, pixels: screenFloor1Final, title: "Checking if we're on " + floor1, jumpTitle: floor1, skipLog: skipLogs},
                     {actionType: actionJumpIfScreen, pixels: screenFloor2Final, title: "Checking if we're on " + floor2, jumpTitle: floor2, skipLog: skipLogs},
                     {actionType: actionJumpIfScreen, pixels: screenLvl234, title: "Checking if we're on " + lvl234, jumpTitle: lvl234, skipLog: skipLogs},
                     {actionType: actionJumpIfScreen, pixels: screenLvl789, title: "Checking if we're on " + lvl789, jumpTitle: lvl789, skipLog: skipLogs},
                     delay(1000)
                 ], MACRO_DUNGEON, 0)
-                
+
                 detectAttempts --
                 if (detectAttempts <=0) {
                     setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
@@ -3376,13 +3364,13 @@
                     showMacroErrorPopup("Failed to detect the current dungeon level")
                     break
                 }
-            } 
+            }
 
             const jumpIfLvl234 = {pixels: screenLvl234, actionType: actionJumpIfScreen, jumpTitle: lvl234}
             const jumpIfLvl789 = {pixels: screenLvl789, actionType: actionJumpIfScreen, jumpTitle: lvl789}
-            const jumpIfLvl5 = {pixels: screenLvl5, actionType: actionJumpIfScreen, jumpTitle: lvl5}
-            const jumpIfLvl0 = {pixels: screenLvl0, actionType: actionJumpIfScreen, jumpTitle: lvl0}
-                
+            const jumpIfLvl5 = {pixels: screenLvl5, actionType: actionJumpIfScreen, jumpTitle: lvl(5)}
+            const jumpIfLvl0 = {pixels: screenLvl0, actionType: actionJumpIfScreen, jumpTitle: lvl(0)}
+
             if (skipUntilAction == lvl234) {
                 await runActions([
                     title(lvl234), gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
@@ -3390,7 +3378,7 @@
                     title(lvl234), gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                     jumpIfLvl234, jumpIfLvl5,
                     title(lvl234), gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
-                    {actionType: actionJump, jumpTitle: lvl5}
+                    {actionType: actionJump, jumpTitle: lvl(5)}
                 ], MACRO_DUNGEON)
             } else if (skipUntilAction == lvl789) {
                 await runActions([
@@ -3399,24 +3387,24 @@
                     title(lvl789), gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
                     jumpIfLvl789, jumpIfLvl0,
                     title(lvl789), gateMid, delay(EXTRA_GATE_DELAY_FIRST_FLOOR), ...initialFloorRooms, ...battleActions, delay(EXTRA_WALK_DELAY_FIRST_FLOOR),
-                    {actionType: actionJump, jumpTitle: lvl0}
+                    {actionType: actionJump, jumpTitle: lvl(0)}
                 ], MACRO_DUNGEON)
             }
 
             for (let i = 0; i < floors; i++) {
                 if (isRunningMacro != MACRO_DUNGEON) break
                 await runActions([
-                    ...fastRightGateActions, title(lvl1), waitForLvl1, gateRight, waitFor1RoomSelection, roomMid, ...battleActions,
-                    ...fastRightGateActions, title("lvl2"), waitForLvl234, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    ...fastRightGateActions, title("lvl3"), waitForLvl234, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    ...fastRightGateActions, title("lvl4"), waitForLvl234, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
-                    ...fastRightGateActions, title(lvl5), waitForLvl5, gateLeft, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    ...fastRightGateActions, title(lvl(1)), waitForLvl1, gateRight, waitFor1RoomSelection, title(lvl(1)), roomMid, ...battleActions,
+                    ...fastRightGateActions, title(lvl(2)), waitForLvl234, gateMid, waitFor2RoomSelection, title(lvl(2)), checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    ...fastRightGateActions, title(lvl(3)), waitForLvl234, gateMid, waitFor2RoomSelection, title(lvl(3)), checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    ...fastRightGateActions, title(lvl(4)), waitForLvl234, gateMid, waitFor1RoomSelection, title(lvl(4)), roomMid, ...battleActions,
+                    ...fastRightGateActions, title(lvl(5)), waitForLvl5, gateLeft, waitFor2RoomSelection, title(lvl(5)), checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title(floor1), waitForFloor1Done, floor1Done, waitForFloorConfirm, floorConfirm,
-                    ...fastLeftGateActions, title(lvl6), waitForLvl6, gateLeft, waitFor1RoomSelection, roomMid, ...battleActions,
-                    ...fastLeftGateActions, title("lvl7"), waitForLvl789, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    ...fastLeftGateActions, title("lvl8"), waitForLvl789, gateMid, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
-                    ...fastLeftGateActions, title("lvl9"), waitForLvl789, gateMid, waitFor1RoomSelection, roomMid, ...battleActions,
-                    ...fastLeftGateActions, title(lvl0), waitForLvl0, gateRight, waitFor2RoomSelection, checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    ...fastLeftGateActions, title(lvl(6)), waitForLvl6, gateLeft, waitFor1RoomSelection, title(lvl(6)), roomMid, ...battleActions,
+                    ...fastLeftGateActions, title(lvl(7)), waitForLvl789, gateMid, waitFor2RoomSelection, title(lvl(7)), checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    ...fastLeftGateActions, title(lvl(8)), waitForLvl789, gateMid, waitFor2RoomSelection, title(lvl(8)), checkRoomColors, roomLeft, roomRight, ...battleActions,
+                    ...fastLeftGateActions, title(lvl(9)), waitForLvl789, gateMid, waitFor1RoomSelection, title(lvl(9)), roomMid, ...battleActions,
+                    ...fastLeftGateActions, title(lvl(0)), waitForLvl0, gateRight, waitFor2RoomSelection, title(lvl(0)), checkRoomColors, roomLeft, roomRight, ...battleActions,
                     title(floor2), waitForFloor2Done, floor2Done, waitForFloorConfirm, floorConfirm,
                 ], MACRO_DUNGEON)
 
