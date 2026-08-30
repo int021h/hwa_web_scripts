@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-30_03:19
+// @version      2026-08-30_15:15
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -116,7 +116,7 @@
 
     // ============ Dungeon ===========
     const screenLvl1 = [
-        {"x": 0.695023, "y": 0.105830, "color": [226,226,235]},
+        {"x": 0.695023, "y": 0.105830, "color": [226,226,235], "threshold": 20},
         {"x": 0.274401, "y": 0.193548, "color": [77,6,11]},
         {"x": 0.19337, "y": 0.209677, "color": [47,55,64]},
         {"x": 0.837937, "y": 0.211694, "color": [49,49,65]}
@@ -156,7 +156,7 @@
         {"x": 0.726273, "y": 0.173004, "color": [68,77,94]}
     ]
     const screenLvl0 = [
-        {"x": 0.695023, "y": 0.105830, "color": [226,226,235]},
+        {"x": 0.695023, "y": 0.105830, "color": [226,226,235], "threshold": 20},
         {"x": 0.669429, "y": 0.114919, "color": [31,38,86]},
         {"x": 0.349908, "y": 0.298387, "color": [49,54,60]},
         {"x": 0.197974, "y": 0.294355, "color": [52,58,64]},
