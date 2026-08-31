@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dungeon runner
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-30_15:15
+// @version      2026-08-31_09:49
 // @description  try to take over the world!
 // @author       You
 // @match        https://www.hero-wars-alliance.com/*
@@ -3355,15 +3355,18 @@
                 ], MACRO_DUNGEON, 0)
 
                 detectAttempts --
-                if (detectAttempts <=0) {
-                    setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
-                    if (isRunningMacro == MACRO_DUNGEON) {
-                        isRunningMacro = null
-                        await releaseWakeLock()
+                if (detectAttempts <= 0) {
+                    if (!RELOAD_PAGE_ON_FAILURE) {
+                       setActivated(dailyButton, false, BUTTON_TEXT_STOP_CUSTOM, BUTTON_TEXT_RUN_CUSTOM)
+                        if (isRunningMacro == MACRO_DUNGEON) {
+                            isRunningMacro = null
+                            await releaseWakeLock()
+                        }
+                        showMacroErrorPopup("Failed to detect the current dungeon level")
                     }
-                    showMacroErrorPopup("Failed to detect the current dungeon level")
                     break
                 }
+
             }
 
             const jumpIfLvl234 = {pixels: screenLvl234, actionType: actionJumpIfScreen, jumpTitle: lvl234}
